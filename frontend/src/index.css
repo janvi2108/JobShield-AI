@@ -1,0 +1,37 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-shield-bg text-shield-text font-sans antialiased selection:bg-shield-primary/20 selection:text-shield-soft;
+    background-color: #101114;
+    color: #F2F4F6;
+    min-height: 100vh;
+  }
+}
+
+/* Custom restrained scrollbar for technical SaaS feel */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #101114;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2C313C;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3B3F46;
+}
