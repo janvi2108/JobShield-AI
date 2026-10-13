@@ -18,20 +18,23 @@ JobShield AI tackles this challenge through **Explainable AI (XAI)**—deliverin
 
 ## 2. Current Implementation Status
 
-This repository is currently at **Part 1 (Foundation + Working MVP Dashboard)**:
+This repository is currently at **Part 1, Phase 2: EMSCAD Dataset Preparation & Exploration**:
 
 | Component | Status | Implementation Details |
 |---|---|---|
-| **Project Architecture** | ✅ Completed | Clean multi-tier repo (`backend/`, `frontend/`, `data/`, `models/`, `scripts/`, `notebooks/`, `docs/`). |
-| **Backend API Core** | ✅ Completed | FastAPI service running on port 8000 with CORS restriction, structured error handling, and `GET /api/health`. |
-| **Backend Tests** | ✅ Completed | Automated `pytest` suite validating health schema, CORS headers, and subsystem detection (100% passing). |
-| **Design System** | ✅ Completed | Dedicated cybersecurity SaaS dark theme with exact brand palette tokens (`#101114`, `#3B3F46`, `#D9B100`, `#F3DA87`, `#F2F4F6`). |
+| **Project Architecture** | ✅ Completed | Multi-tier repository structure (`backend/`, `frontend/`, `data/`, `models/`, `scripts/`, `notebooks/`, `docs/`). |
+| **Backend API Core** | ✅ Completed | FastAPI service with CORS restriction, structured error handling, and `GET /api/health`. |
+| **Backend & Pipeline Tests** | ✅ Completed | Automated `pytest` suite validating health schema, CORS headers, target mappers, leakage guards, and stratified splits (15/15 tests passing). |
+| **Design System** | ✅ Completed | Cybersecurity SaaS dark theme with exact brand palette tokens (`#101114`, `#3B3F46`, `#D9B100`, `#F3DA87`, `#F2F4F6`). |
 | **Frontend Dashboard** | ✅ Completed | 4-stage pipeline explanation, EMSCAD dataset characteristics, live API telemetry, and session overview. |
 | **Analyze Job Page** | ✅ Completed | Input validation, word/char counters, sample templates (Suspicious vs. Legitimate), and honest training check. |
 | **Analysis Results Page** | ✅ Completed | Meaningful empty state + complete specification schema blueprint ready for model inference output. |
 | **Model Performance Page** | ✅ Completed | Comparison breakdown for Logistic Regression, Linear SVM, Random Forest, and XGBoost with PR-AUC evaluation policy. |
-| **Dataset & ML Training** | ⏳ Next Step | Data preparation on EMSCAD (17,880 records), feature extraction, and candidate training. |
-| **SHAP Explanations** | ⏳ Next Step | Feature attribution waterfall / token contribution plots. |
+| **Dataset Inspection Tool** | ✅ Completed | `scripts/inspect_dataset.py` with multi-encoding fallback, missingness metrics, duplicates detection, and cardinality analysis. |
+| **Dataset Preparation Pipeline** | ✅ Completed | `scripts/prepare_dataset.py` implementing target validation, `in_balanced_dataset` leakage removal, deduplication, and reproducible 80:10:10 stratified partitioning. |
+| **Mentor Documentation** | ✅ Completed | `docs/dataset_preparation.md` explaining EMSCAD columns, imbalance, leakage prevention, and disjoint splits. |
+| **Candidate Model Training** | ⏳ Next Phase | Training Logistic Regression, Linear SVM, Random Forest, and XGBoost on `train.csv`. |
+| **SHAP Explanations** | ⏳ Next Phase | Feature attribution waterfall / token contribution plots. |
 | **GenAI & SQLite History** | 📋 Part 2 Scope | LLM detail extraction, natural language summaries, and database history. |
 
 ---
@@ -60,7 +63,8 @@ JobShield-AI/
 │   │       └── health_service.py      # Artifact verification & system health logic
 │   ├── tests/
 │   │   ├── __init__.py
-│   │   └── test_health.py             # Pytest automated test cases
+│   │   ├── test_health.py             # FastAPI health & CORS tests
+│   │   └── test_dataset_preparation.py # Target mapping, deduplication & split tests
 │   └── requirements.txt               # Backend & ML dependencies
 ├── frontend/
 │   ├── src/
@@ -75,7 +79,7 @@ JobShield-AI/
 │   │   │   ├── ResultsPage.jsx        # Inference results & schema blueprint
 │   │   │   └── PerformancePage.jsx    # Model comparison & PR-AUC methodology
 │   │   ├── services/
-│   │   │   └── api.js                 # Frontend API client
+│   │   │   └── api.js                 # Frontend API client (auto port fallback)
 │   │   ├── App.jsx                    # Route mapping & layout wrapper
 │   │   ├── main.jsx                   # React DOM root mounting
 │   │   └── index.css                  # Tailwind styles & dark mode definitions
@@ -85,12 +89,17 @@ JobShield-AI/
 │   ├── postcss.config.js
 │   └── vite.config.js                 # Vite development & build setup
 ├── data/
-│   ├── raw/                           # Raw datasets (e.g. emscad_dataset.csv)
-│   └── processed/                     # Cleaned feature matrices and splits
+│   ├── raw/                           # Raw source datasets (e.g. data/raw/DataSet.csv)
+│   └── processed/                     # Cleaned partitions: train.csv, validation.csv, test.csv
 ├── models/                            # Trained serialized model artifacts (.joblib)
-├── scripts/                           # Standalone training & evaluation scripts
+├── scripts/
+│   ├── __init__.py
+│   ├── inspect_dataset.py             # Data quality & encoding inspection CLI
+│   └── prepare_dataset.py             # Preprocessing & stratified 80:10:10 splitting CLI
 ├── notebooks/                         # Exploratory data analysis (EDA) notebooks
-├── docs/                              # Architecture diagrams & documentation
+├── docs/
+│   ├── dataset_preparation.md         # Mentor guide: EMSCAD schema, imbalance, leakage & splits
+│   └── ...
 ├── .env.example                       # Non-secret environment configuration
 ├── .gitignore                         # Python, Node, data, and secret exclusions
 └── README.md                          # Project documentation
@@ -117,33 +126,33 @@ Decorative AI clichés (floating neon blobs, glassmorphism, chatbot interfaces, 
 - **Operating System**: Windows 10/11 (PowerShell environment)
 - **Python**: 3.10+ (tested on Python 3.12.4)
 - **Node.js**: 18+ (tested on Node v22.14.0, npm 10.9.2)
-- **Git** (optional for version control)
+- **Git**
 
 ---
 
 ## 6. Windows PowerShell Setup & Run Instructions
 
-Open two separate Windows PowerShell windows: one for the backend and one for the frontend.
+Open separate Windows PowerShell windows for running the backend, frontend, and dataset tools:
 
 ### Terminal 1: Backend Setup & Execution
 
 ```powershell
-# Navigate to the workspace root
+# Navigate to workspace root
 cd "c:\Users\Hp\OneDrive - IFI TECHSOLUTIONS LTD\Desktop\jobsheild ai minor"
 
-# Install backend dependencies (if not already installed)
+# Install dependencies (FastAPI, Scikit-learn, XGBoost, etc.)
 pip install -r backend/requirements.txt
 
 # Start the FastAPI development server
-uvicorn backend.app.main:app --reload --host 127.0.0.1 --port 8000
+uvicorn backend.app.main:app --reload --host 127.0.0.1 --port 8008
 ```
 
-The backend will be available at:
-- Root API: [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
-- Health Check: [http://127.0.0.1:8000/api/health](http://127.0.0.1:8000/api/health)
-- Interactive OpenAPI Docs: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+The backend is accessible at:
+- Root API: [http://127.0.0.1:8008/](http://127.0.0.1:8008/)
+- Health Check: [http://127.0.0.1:8008/api/health](http://127.0.0.1:8008/api/health)
+- Interactive OpenAPI Docs: [http://127.0.0.1:8008/docs](http://127.0.0.1:8008/docs)
 
-### Terminal 2: Frontend Setup & Execution
+### Terminal 2: Frontend Execution
 
 ```powershell
 # Navigate to the frontend directory
@@ -153,59 +162,67 @@ cd "c:\Users\Hp\OneDrive - IFI TECHSOLUTIONS LTD\Desktop\jobsheild ai minor\fron
 npm run dev
 ```
 
-The frontend dashboard will be available at:
+The frontend dashboard is accessible at:
 - Web App: [http://localhost:5173/](http://localhost:5173/)
+
+### Terminal 3: EMSCAD Dataset Tools (When CSV is Supplied)
+
+Place the EMSCAD CSV file (commonly named `DataSet.csv`) in `data/raw/`, then run:
+
+```powershell
+# Inspect the raw dataset (generates data/processed/dataset_report.json)
+python scripts/inspect_dataset.py --data-path data/raw/DataSet.csv
+
+# Prepare, deduplicate, remove leakage, and generate 80:10:10 stratified splits
+python scripts/prepare_dataset.py --data-path data/raw/DataSet.csv
+```
+
+Outputs generated in `data/processed/`:
+- `train.csv` (80% stratified training split)
+- `validation.csv` (10% stratified validation split)
+- `test.csv` (10% held-out test split)
+- `dataset_report.json` (comprehensive statistical report)
+- `split_summary.json` (detailed split distribution and metadata)
 
 ---
 
 ## 7. Running Verification & Automated Tests
 
-### Run Backend Pytest Suite
+Run the complete test suite from the repository root:
 
 ```powershell
-# From the project root
 python -m pytest backend/tests/ -v
 ```
 
 Expected output:
 ```
+backend/tests/test_dataset_preparation.py::test_validate_and_map_target_valid_ft PASSED
+backend/tests/test_dataset_preparation.py::test_validate_and_map_target_valid_strings_0_1 PASSED
+backend/tests/test_dataset_preparation.py::test_validate_and_map_target_unexpected_labels PASSED
+backend/tests/test_dataset_preparation.py::test_validate_and_map_target_null_values PASSED
+backend/tests/test_dataset_preparation.py::test_validate_and_map_target_missing_column PASSED
+backend/tests/test_dataset_preparation.py::test_deduplicate_dataframe PASSED
+backend/tests/test_dataset_preparation.py::test_remove_leakage_columns PASSED
+backend/tests/test_dataset_preparation.py::test_create_stratified_splits_integrity_and_disjointness PASSED
+backend/tests/test_dataset_preparation.py::test_create_stratified_splits_reproducibility PASSED
+backend/tests/test_dataset_preparation.py::test_prepare_emscad_dataset_end_to_end_on_fixture PASSED
+backend/tests/test_dataset_preparation.py::test_resolve_dataset_path_missing PASSED
 backend/tests/test_health.py::test_root_endpoint PASSED
 backend/tests/test_health.py::test_health_endpoint_success PASSED
 backend/tests/test_health.py::test_health_endpoint_details PASSED
 backend/tests/test_health.py::test_cors_headers_allowed PASSED
-4 passed in < 1s
+============================== 15 passed in 8.5s ==============================
 ```
-
-### Run Frontend Production Build
-
-```powershell
-# Inside the frontend/ directory
-cd frontend
-npm run build
-```
-
-This compiles optimized production static assets into `frontend/dist/`.
 
 ---
 
-## 8. What Works Now vs. What Is Planned
+## 8. Next Steps (Proceeding to Model Training)
 
-### What Currently Works (Foundation Phase)
-1. **Interactive Navigation**: Seamless routing across `/`, `/analyze`, `/results`, and `/performance`.
-2. **Live Backend Communication**: The frontend polls `GET /api/health` to dynamically detect backend connectivity and artifact presence.
-3. **Honest System Status Reporting**: Displays real subsystem state without fabricating synthetic models or metrics.
-4. **Input Validation**: Minimum character count, live word/character counters, and sample template loaders.
-5. **Cybersecurity Design System**: High-contrast, brand-compliant UI.
-
-### What Remains a Placeholder (Pending Subsequent Steps)
-1. **Model Training**: EMSCAD data loading, TF-IDF vectorization, and fitting candidate algorithms.
-2. **Inference Predictions**: Classification probabilities and risk thresholds based on trained `.joblib` artifacts.
-3. **SHAP Waterfall Visualizations**: Shapley value feature attribution computations.
-
----
-
-## 9. Next Steps (Continuing Part 1)
-
-1. **Step 2**: Inspect and ingest the EMSCAD dataset (17,880 records), perform exploratory data analysis, and establish a leakage-free stratified train/validation/test split.
-2. **Step 3**: Train and compare Logistic Regression, Linear SVM, Random Forest, and XGBoost classifiers; evaluate PR-AUC and F1 scores.
-3. **Step 4**: Select the top-performing model, serialize pipeline artifacts to `models/`, connect inference endpoints to FastAPI, and integrate SHAP explainability into the frontend.
+1. Supply the real EMSCAD CSV file (e.g. `data/raw/DataSet.csv`).
+2. Run `python scripts/prepare_dataset.py` to create the processed partitions.
+3. Fit TF-IDF on `train.csv` only and train the four candidate classifiers:
+   - Logistic Regression
+   - Linear Support Vector Machine (Linear SVM)
+   - Random Forest Classifier
+   - XGBoost Classifier
+4. Compare validation PR-AUC, tune classification thresholds, evaluate on the test split, serialize winning artifacts to `models/`, and connect live predictions to FastAPI.
