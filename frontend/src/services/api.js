@@ -1,47 +1,56 @@
 /**
  * JobShield AI Backend API Service
  * Handles communication with the FastAPI service endpoints.
+ * Automatically discovers active backend port (defaults to 8000, falls back to 8008 if 8000 is occupied).
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
+const CANDIDATE_BASE_URLS = [
+  import.meta.env.VITE_API_BASE_URL,
+  'http://127.0.0.1:8000/api',
+  'http://127.0.0.1:8008/api',
+].filter(Boolean);
+
+let activeBaseUrl = CANDIDATE_BASE_URLS[0];
 
 /**
  * Fetch service health status from FastAPI backend
- * @returns {Promise<{ ok: boolean, data?: any, error?: string }>}
+ * @returns {Promise<{ ok: boolean, data?: any, error?: string, url?: string }>}
  */
 export async function checkBackendHealth() {
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000);
+  // Test active or candidate endpoints
+  const urlsToTry = Array.from(new Set([activeBaseUrl, ...CANDIDATE_BASE_URLS]));
 
-    const response = await fetch(`${API_BASE_URL}/health`, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      },
-      signal: controller.signal,
-    });
+  for (const baseUrl of urlsToTry) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
 
-    clearTimeout(timeoutId);
+      const response = await fetch(`${baseUrl}/health`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+        signal: controller.signal,
+      });
 
-    if (!response.ok) {
-      return {
-        ok: false,
-        error: `HTTP Error ${response.status}: ${response.statusText}`,
-      };
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        const data = await response.json();
+        activeBaseUrl = baseUrl;
+        return { ok: true, data, url: baseUrl };
+      }
+    } catch {
+      // Continue to next candidate URL
     }
-
-    const data = await response.json();
-    return { ok: true, data };
-  } catch (err) {
-    if (err.name === 'AbortError') {
-      return { ok: false, error: 'Connection timed out (backend unreachable at ' + API_BASE_URL + ')' };
-    }
-    return {
-      ok: false,
-      error: 'Backend offline or unreachable. Start the FastAPI server on port 8000.',
-    };
   }
+
+  return {
+    ok: false,
+    error: 'Backend offline or unreachable. Start the FastAPI server (e.g. on port 8000 or 8008).',
+  };
 }
 
-export { API_BASE_URL };
+export function getActiveApiUrl() {
+  return activeBaseUrl;
+}
