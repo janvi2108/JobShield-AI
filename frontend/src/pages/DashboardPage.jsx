@@ -79,7 +79,7 @@ export default function DashboardPage({ backendHealth, backendError }) {
               <div className="flex justify-between">
                 <span className="text-shield-subtle">Backend API:</span>
                 <span className={backendError ? 'text-red-400' : 'text-emerald-400'}>
-                  {backendError ? 'Offline (Port 8000)' : 'Active (FastAPI)'}
+                  {backendError ? 'Offline (Port 8008)' : 'Active (FastAPI)'}
                 </span>
               </div>
               <div className="flex justify-between">

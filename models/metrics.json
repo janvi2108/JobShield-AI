@@ -1,0 +1,171 @@
+{
+  "project": "JobShield AI",
+  "benchmark_dataset": "Aegean University EMSCAD (Embarrassingly Shallow Model Comparison)",
+  "timestamp": "2026-10-26T08:21:56.919387+00:00",
+  "selected_model": {
+    "name": "Linear Support Vector Machine",
+    "decision_threshold": 0.48,
+    "selection_rationale": "Highest validation PR-AUC and minority class F1-score across 4 candidates."
+  },
+  "candidate_comparison": {
+    "Logistic Regression": {
+      "threshold": 0.61,
+      "pr_auc": 0.8748,
+      "roc_auc": 0.9866,
+      "f1_minority": 0.8182,
+      "precision_minority": 0.7912,
+      "recall_minority": 0.8471,
+      "accuracy": 0.9818,
+      "confusion_matrix": {
+        "true_negative": 1659,
+        "false_positive": 19,
+        "false_negative": 13,
+        "true_positive": 72
+      },
+      "training_time_seconds": 0.91,
+      "default_threshold_metrics": {
+        "threshold": 0.5,
+        "pr_auc": 0.8748,
+        "roc_auc": 0.9866,
+        "f1_minority": 0.7363,
+        "precision_minority": 0.6379,
+        "recall_minority": 0.8706,
+        "accuracy": 0.9699,
+        "confusion_matrix": {
+          "true_negative": 1636,
+          "false_positive": 42,
+          "false_negative": 11,
+          "true_positive": 74
+        }
+      }
+    },
+    "Linear Support Vector Machine": {
+      "threshold": 0.48,
+      "pr_auc": 0.9046,
+      "roc_auc": 0.9845,
+      "f1_minority": 0.8608,
+      "precision_minority": 0.9315,
+      "recall_minority": 0.8,
+      "accuracy": 0.9875,
+      "confusion_matrix": {
+        "true_negative": 1673,
+        "false_positive": 5,
+        "false_negative": 17,
+        "true_positive": 68
+      },
+      "training_time_seconds": 4.94,
+      "default_threshold_metrics": {
+        "threshold": 0.5,
+        "pr_auc": 0.9046,
+        "roc_auc": 0.9845,
+        "f1_minority": 0.8608,
+        "precision_minority": 0.9315,
+        "recall_minority": 0.8,
+        "accuracy": 0.9875,
+        "confusion_matrix": {
+          "true_negative": 1673,
+          "false_positive": 5,
+          "false_negative": 17,
+          "true_positive": 68
+        }
+      }
+    },
+    "Random Forest": {
+      "threshold": 0.6,
+      "pr_auc": 0.7977,
+      "roc_auc": 0.9706,
+      "f1_minority": 0.7425,
+      "precision_minority": 0.7561,
+      "recall_minority": 0.7294,
+      "accuracy": 0.9756,
+      "confusion_matrix": {
+        "true_negative": 1658,
+        "false_positive": 20,
+        "false_negative": 23,
+        "true_positive": 62
+      },
+      "training_time_seconds": 2.47,
+      "default_threshold_metrics": {
+        "threshold": 0.5,
+        "pr_auc": 0.7977,
+        "roc_auc": 0.9706,
+        "f1_minority": 0.6907,
+        "precision_minority": 0.6147,
+        "recall_minority": 0.7882,
+        "accuracy": 0.966,
+        "confusion_matrix": {
+          "true_negative": 1636,
+          "false_positive": 42,
+          "false_negative": 18,
+          "true_positive": 67
+        }
+      }
+    },
+    "XGBoost": {
+      "threshold": 0.74,
+      "pr_auc": 0.8721,
+      "roc_auc": 0.9866,
+      "f1_minority": 0.7898,
+      "precision_minority": 0.8611,
+      "recall_minority": 0.7294,
+      "accuracy": 0.9813,
+      "confusion_matrix": {
+        "true_negative": 1668,
+        "false_positive": 10,
+        "false_negative": 23,
+        "true_positive": 62
+      },
+      "training_time_seconds": 67.27,
+      "default_threshold_metrics": {
+        "threshold": 0.5,
+        "pr_auc": 0.8721,
+        "roc_auc": 0.9866,
+        "f1_minority": 0.7391,
+        "precision_minority": 0.6869,
+        "recall_minority": 0.8,
+        "accuracy": 0.9728,
+        "confusion_matrix": {
+          "true_negative": 1647,
+          "false_positive": 31,
+          "false_negative": 17,
+          "true_positive": 68
+        }
+      }
+    }
+  },
+  "test_evaluation": {
+    "model_name": "Linear Support Vector Machine",
+    "metrics": {
+      "threshold": 0.48,
+      "pr_auc": 0.8899,
+      "roc_auc": 0.9877,
+      "f1_minority": 0.8344,
+      "precision_minority": 0.8831,
+      "recall_minority": 0.7907,
+      "accuracy": 0.9847,
+      "confusion_matrix": {
+        "true_negative": 1669,
+        "false_positive": 9,
+        "false_negative": 18,
+        "true_positive": 68
+      }
+    }
+  },
+  "dataset_splits": {
+    "train": {
+      "total": 14105,
+      "fraudulent": 685,
+      "legitimate": 13420
+    },
+    "validation": {
+      "total": 1763,
+      "fraudulent": 85,
+      "legitimate": 1678
+    },
+    "test": {
+      "total": 1764,
+      "fraudulent": 86,
+      "legitimate": 1678
+    }
+  }
+}

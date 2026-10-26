@@ -1,310 +1,324 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+﻿import React, { useState, useMemo } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import {
-  SearchCheck,
-  AlertCircle,
-  FileText,
-  RotateCcw,
-  Sparkles,
-  Info,
-  ExternalLink,
-  ShieldAlert,
-} from 'lucide-react';
-import StatusBadge from '../components/StatusBadge';
+  SearchCheck, RotateCcw, ShieldAlert, AlertCircle, Info, ArrowRight, FileText,
+} from "lucide-react";
+import StatusBadge from "../components/StatusBadge";
+import { analyzeJob, getActiveApiUrl } from "../services/api";
 
-const SAMPLE_POSTINGS = {
-  suspicious: `Position: Remote Entry-Level Data Entry Assistant & Operations
-Company: Global Digital Dynamics Inc.
-Location: Fully Remote (Anywhere in US/Canada)
-Salary: $45.00 - $55.00 / hour (Immediate daily payout)
+const SUSPICIOUS_SAMPLE = `URGENT HIRING: Work From Home Data Entry Agent — Earn $800/Week Guaranteed
 
-About the Opportunity:
-We are seeking motivated individuals for our remote data team. No prior experience required. Flexible working hours (10-20 hrs/week). Immediate onboarding within 24 hours.
+We are urgently hiring remote data entry agents to work from home. No experience necessary. You will be paid $800 per week guaranteed.
 
-Key Responsibilities:
-- Receive and compile customer records via encrypted channels.
-- Coordinate fund transfers and purchasing of home office workstation materials.
-- Verify payment receipts via wire transfer, Western Union, and cryptocurrency.
+To get started, you must send a $150 registration fee to cover training materials and software setup. This is fully refundable after your first paycheck.
 
-Requirements:
-- Must have personal bank account or digital crypto wallet for equipment check disbursement.
-- Candidates must purchase our pre-approved home office laptop bundle ($850) which will be fully reimbursed on your first paycheck.
-- Fast-track interview conducted entirely via Telegram: @global_recruiter_hr. Contact immediately to secure your spot.`,
+Apply directly via WhatsApp: +1-555-0198 (DO NOT email, WhatsApp only for fast response)
+Telegram: @earnbigfromhome
 
-  legitimate: `Position: Junior Frontend Developer (React / JavaScript)
-Company: DataCore Technologies Ltd.
-Location: Austin, TX (Hybrid - 2 days in office)
-Salary: $75,000 - $88,000 / year + Comprehensive Benefits
+Positions are filling up FAST. Only 10 spots left. Apply in the next 24 hours or lose your spot forever.
 
-About DataCore Technologies:
-DataCore provides enterprise analytics and data pipeline solutions to Fortune 500 organizations. We foster an inclusive, engineering-first culture.
+No interview required. No experience needed. Students and unemployed individuals encouraged to apply. Guaranteed approval for all applicants.`;
+
+const LEGITIMATE_SAMPLE = `Software Engineering Intern — Summer 2025
+Acme Technology Solutions | San Francisco, CA (Hybrid)
+
+About Acme Technology Solutions:
+We are a Series B SaaS company building developer productivity tools used by over 50,000 engineers worldwide. Our engineering team of 120 is distributed across San Francisco, London, and Singapore.
+
+Role Overview:
+We are looking for a motivated Software Engineering Intern to join our Platform team for a 12-week summer internship. You will work on real production systems, contribute to code that serves thousands of users, and be paired with a senior engineer mentor throughout the internship.
 
 Responsibilities:
-- Collaborate with cross-functional teams to build and maintain responsive React web applications.
-- Implement reusable UI components in accordance with our design system.
-- Participate in code reviews, automated testing, and agile sprint planning.
-- Diagnose and resolve frontend performance bottlenecks and browser compatibility issues.
+- Implement features in our core Python/TypeScript codebase under mentor guidance
+- Participate in design reviews, sprint planning, and retrospectives
+- Write unit and integration tests for your contributions
+- Present your project deliverables at our end-of-summer demo day
 
 Requirements:
-- Bachelor's degree in Computer Science or equivalent practical experience.
-- 1-2 years experience with modern JavaScript (ES6+), React, and CSS/Tailwind.
-- Familiarity with RESTful APIs, Git version control, and CI/CD pipelines.
-- Strong communication skills and collaborative problem-solving approach.
-- Note: All interviews are conducted via our official Google Meet domain (@datacore.io). We never request equipment payments or personal banking info prior to formal HR onboarding.`,
-};
+- Currently enrolled in a Computer Science or related degree program
+- Familiarity with Python or TypeScript (either is fine)
+- Strong problem-solving skills and eagerness to learn
+
+Compensation:
+$42/hour. No fees. Housing stipend available for relocating interns.
+
+To Apply:
+Submit your application at careers.acmehq.com/intern-2025. We do not request payment at any stage of the hiring process.`;
 
 export default function AnalyzePage({ backendHealth, backendError, onNavigateToResults }) {
-  const [jobTitle, setJobTitle] = useState('');
-  const [companyName, setCompanyName] = useState('');
-  const [description, setDescription] = useState('');
+  const navigate = useNavigate();
+  const [jobTitle, setJobTitle] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [description, setDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [validationError, setValidationError] = useState('');
-  const [modelStatusNotice, setModelStatusNotice] = useState(null);
+  const [validationError, setValidationError] = useState("");
+  const [submitError, setSubmitError] = useState("");
 
-  const charCount = description.length;
-  const wordCount = description.trim() ? description.trim().split(/\s+/).length : 0;
   const minChars = 50;
+  const charCount = description.length;
+  const wordCount = useMemo(
+    () => description.trim().split(/\s+/).filter(Boolean).length,
+    [description]
+  );
+
+  const modelStatusNotice = useMemo(() => {
+    if (backendError) {
+      return {
+        type: "error",
+        title: "Backend Offline",
+        message: backendError,
+      };
+    }
+    if (backendHealth && !backendHealth.model_loaded) {
+      return {
+        type: "info",
+        title: "ML Model Not Yet Loaded",
+        message:
+          "The inference pipeline is available but the trained model artifact has not been loaded. Run the training script to generate the model file, then restart the backend service.",
+      };
+    }
+    return null;
+  }, [backendHealth, backendError]);
 
   const handleLoadSample = (type) => {
-    if (type === 'suspicious') {
-      setJobTitle('Remote Entry-Level Data Entry Assistant & Operations');
-      setCompanyName('Global Digital Dynamics Inc.');
-      setDescription(SAMPLE_POSTINGS.suspicious);
+    setValidationError("");
+    setSubmitError("");
+    if (type === "suspicious") {
+      setJobTitle("Work From Home Data Entry Agent");
+      setCompanyName("(unknown)");
+      setDescription(SUSPICIOUS_SAMPLE);
     } else {
-      setJobTitle('Junior Frontend Developer (React / JavaScript)');
-      setCompanyName('DataCore Technologies Ltd.');
-      setDescription(SAMPLE_POSTINGS.legitimate);
+      setJobTitle("Software Engineering Intern");
+      setCompanyName("Acme Technology Solutions");
+      setDescription(LEGITIMATE_SAMPLE);
     }
-    setValidationError('');
-    setModelStatusNotice(null);
   };
 
   const handleClear = () => {
-    setJobTitle('');
-    setCompanyName('');
-    setDescription('');
-    setValidationError('');
-    setModelStatusNotice(null);
+    setJobTitle("");
+    setCompanyName("");
+    setDescription("");
+    setValidationError("");
+    setSubmitError("");
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setValidationError('');
-    setModelStatusNotice(null);
+    setValidationError("");
+    setSubmitError("");
 
     if (charCount < minChars) {
-      setValidationError(
-        `Job description must be at least ${minChars} characters to allow meaningful TF-IDF feature extraction (currently ${charCount} characters).`
-      );
+      setValidationError(`Please provide at least ${minChars} characters of job posting text.`);
       return;
     }
 
     setIsSubmitting(true);
+    try {
+      const res = await analyzeJob({
+        title: jobTitle.trim() || "Job Posting Under Analysis",
+        company_name: companyName.trim() || "",
+        description: description.trim(),
+      });
 
-    // Foundation Phase check:
-    // In this MVP phase, we verify backend model artifact status honestly.
-    // If backend reports pending_training, we display the honest technical status
-    // rather than faking an ML prediction.
-    setTimeout(() => {
-      setIsSubmitting(false);
-
-      if (backendError) {
-        setModelStatusNotice({
-          type: 'error',
-          title: 'Backend API Unreachable',
-          message:
-            'Unable to reach FastAPI at http://127.0.0.1:8000/api. Ensure the backend server is running in a separate terminal via "uvicorn backend.app.main:app --reload".',
-        });
-      } else if (backendHealth?.model_status !== 'trained') {
-        setModelStatusNotice({
-          type: 'pending',
-          title: 'Foundation Phase: Model Training Pending',
-          message:
-            'The backend foundation is healthy, but machine learning models have not been trained yet. In accordance with the project guidelines, fake predictions are never generated. Once candidate models (Logistic Regression, Linear SVM, Random Forest, XGBoost) are trained on the EMSCAD dataset in the next phase, live inference will be active here.',
-        });
+      if (!res.ok) {
+        setSubmitError(res.error || "Analysis request failed.");
+      } else {
+        if (onNavigateToResults) {
+          onNavigateToResults(res.data);
+        }
+        navigate("/results");
       }
-    }, 400);
+    } catch (err) {
+      setSubmitError(err.message || "An unexpected error occurred during submission.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
-
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-shield-border pb-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[11px] font-mono uppercase tracking-wider text-[#D9B100] font-semibold">
-              Live Inference & Verification
+    <div className="min-h-[calc(100vh-5rem)] bg-[#101114]">
+      {/* Page header */}
+      <div className="border-b border-[#2C313C]/50 bg-[#14161A]/60">
+        <div className="max-w-4xl mx-auto px-6 sm:px-8 py-8">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-[11px] font-mono uppercase tracking-[0.2em] text-[#D9B100] font-semibold">
+              Live Inference Engine
             </span>
           </div>
-          <h2 className="text-xl font-bold text-shield-text">
-            Analyze Job Opportunity
-          </h2>
-          <p className="text-xs text-shield-muted mt-0.5">
-            Submit a job posting text to extract risk signals, evaluate ML scam probability, and inspect model explanations.
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#F2F4F6] tracking-tight">
+            Analyze a Job Posting
+          </h1>
+          <p className="mt-2 text-sm text-[#949BA6] max-w-xl leading-relaxed">
+            Paste the full job or internship text below. The ML pipeline will extract TF-IDF features, classify fraud risk, and generate SHAP explanations.
           </p>
         </div>
+      </div>
 
-        {/* Load sample triggers */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-shield-subtle font-mono hidden md:inline">
-            Load Template:
-          </span>
+      {/* Content */}
+      <div className="max-w-4xl mx-auto px-6 sm:px-8 py-8 sm:py-12 space-y-6">
+
+        {/* Template loader + clear */}
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-xs text-[#626A77] font-mono uppercase tracking-wider">Load Template:</span>
           <button
             type="button"
-            onClick={() => handleLoadSample('suspicious')}
-            className="px-2.5 py-1.5 rounded text-xs font-medium bg-red-950/30 text-red-300 border border-red-900/60 hover:bg-red-950/50 transition-colors"
+            onClick={() => handleLoadSample("suspicious")}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-950/30 text-red-300 border border-red-900/60 hover:bg-red-950/50 transition-colors"
           >
             Suspicious Sample
           </button>
           <button
             type="button"
-            onClick={() => handleLoadSample('legitimate')}
-            className="px-2.5 py-1.5 rounded text-xs font-medium bg-emerald-950/30 text-emerald-300 border border-emerald-900/60 hover:bg-emerald-950/50 transition-colors"
+            onClick={() => handleLoadSample("legitimate")}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-950/30 text-emerald-300 border border-emerald-900/60 hover:bg-emerald-950/50 transition-colors"
           >
             Legitimate Sample
           </button>
           <button
             type="button"
             onClick={handleClear}
-            title="Clear fields"
-            className="p-1.5 rounded text-shield-muted hover:text-shield-text border border-shield-border hover:bg-shield-surface/40 transition-colors"
+            title="Clear all fields"
+            className="px-3 py-1.5 rounded-lg text-xs font-medium text-[#626A77] border border-[#2C313C] hover:text-[#F2F4F6] hover:bg-[#191C22] transition-colors flex items-center gap-1.5"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
+            <RotateCcw className="w-3.5 h-3.5" />Clear
           </button>
         </div>
-      </div>
 
-      {/* Honest Model Status / Error Notice */}
-      {modelStatusNotice && (
-        <div
-          className={`p-4 rounded-lg border ${
-            modelStatusNotice.type === 'error'
-              ? 'bg-red-950/20 border-red-800/60 text-red-200'
-              : 'bg-amber-950/20 border-amber-800/60 text-amber-200'
-          }`}
-        >
-          <div className="flex items-start gap-3">
-            {modelStatusNotice.type === 'error' ? (
-              <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-            ) : (
-              <Info className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
-            )}
-            <div className="space-y-1">
-              <h4 className="text-sm font-semibold text-shield-text">
-                {modelStatusNotice.title}
-              </h4>
-              <p className="text-xs text-shield-muted leading-relaxed">
-                {modelStatusNotice.message}
-              </p>
-              <div className="pt-2 flex items-center gap-3 font-mono text-[11px]">
-                <span className="text-shield-subtle">Target Pipeline:</span>
-                <span className="text-shield-text">EMSCAD (17,880 rows)</span>
-                <span className="text-shield-subtle">•</span>
-                <span className="text-shield-subtle">Engine Status:</span>
-                <StatusBadge status="pending" label="Training Pending" size="xs" />
+        {/* Model/Backend status notice */}
+        {modelStatusNotice && (
+          <div className={`p-4 rounded-xl border ${modelStatusNotice.type === "error" ? "bg-red-950/20 border-red-800/60 text-red-200" : "bg-amber-950/20 border-amber-800/60 text-amber-200"}`}>
+            <div className="flex items-start gap-3">
+              {modelStatusNotice.type === "error"
+                ? <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                : <Info className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />}
+              <div className="space-y-1">
+                <h4 className="text-sm font-semibold text-[#F2F4F6]">{modelStatusNotice.title}</h4>
+                <p className="text-xs text-[#949BA6] leading-relaxed">{modelStatusNotice.message}</p>
+                <div className="pt-2 flex flex-wrap items-center gap-3 font-mono text-[11px] text-[#626A77]">
+                  <span>Dataset: EMSCAD (17,880 rows)</span>
+                  <span>·</span>
+                  <span>Engine: <StatusBadge status="pending" label="Training Pending" size="xs" /></span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Main Analysis Form */}
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Optional Metadata Row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <label className="block text-xs font-medium text-shield-muted font-mono uppercase tracking-wider">
-              Job Title <span className="text-shield-subtle">(Optional)</span>
-            </label>
-            <input
-              type="text"
-              value={jobTitle}
-              onChange={(e) => setJobTitle(e.target.value)}
-              placeholder="e.g. Remote Data Entry Assistant"
-              className="w-full px-3 py-2 rounded-md bg-shield-card border border-shield-border text-sm text-shield-text placeholder-shield-subtle focus:outline-none focus:border-[#D9B100] transition-colors"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="block text-xs font-medium text-shield-muted font-mono uppercase tracking-wider">
-              Company / Recruiter Domain <span className="text-shield-subtle">(Optional)</span>
-            </label>
-            <input
-              type="text"
-              value={companyName}
-              onChange={(e) => setCompanyName(e.target.value)}
-              placeholder="e.g. Acme Global Inc. / @acmecareers.com"
-              className="w-full px-3 py-2 rounded-md bg-shield-card border border-shield-border text-sm text-shield-text placeholder-shield-subtle focus:outline-none focus:border-[#D9B100] transition-colors"
-            />
-          </div>
-        </div>
-
-        {/* Text Area for Posting Description */}
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <label className="block text-xs font-medium text-shield-text font-mono uppercase tracking-wider">
-              Job / Internship Posting Text <span className="text-[#D9B100]">*</span>
-            </label>
-            <div className="text-[11px] font-mono text-shield-subtle space-x-2">
-              <span>{wordCount} words</span>
-              <span>•</span>
-              <span className={charCount < minChars ? 'text-amber-400' : 'text-shield-soft'}>
-                {charCount} characters (min {minChars})
-              </span>
+        {/* Analysis form */}
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Metadata row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-mono uppercase tracking-wider text-[#626A77]">
+                Job Title <span className="text-[#3B3F46]">(Optional)</span>
+              </label>
+              <input
+                type="text"
+                value={jobTitle}
+                onChange={(e) => setJobTitle(e.target.value)}
+                placeholder="e.g. Remote Data Entry Assistant"
+                className="w-full px-4 py-2.5 rounded-xl bg-[#191C22] border border-[#2C313C] text-sm text-[#F2F4F6] placeholder-[#3B3F46] focus:outline-none focus:border-[#D9B100] transition-colors"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-mono uppercase tracking-wider text-[#626A77]">
+                Company / Recruiter <span className="text-[#3B3F46]">(Optional)</span>
+              </label>
+              <input
+                type="text"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                placeholder="e.g. Acme Global Inc."
+                className="w-full px-4 py-2.5 rounded-xl bg-[#191C22] border border-[#2C313C] text-sm text-[#F2F4F6] placeholder-[#3B3F46] focus:outline-none focus:border-[#D9B100] transition-colors"
+              />
             </div>
           </div>
 
-          <textarea
-            rows={12}
-            value={description}
-            onChange={(e) => {
-              setDescription(e.target.value);
-              if (validationError && e.target.value.length >= minChars) {
-                setValidationError('');
-              }
-            }}
-            placeholder="Paste the full job posting, internship offer, recruiter email, or messaging transcript here..."
-            className={`w-full p-3.5 rounded-md bg-shield-card border text-sm text-shield-text placeholder-shield-subtle font-mono text-xs leading-relaxed focus:outline-none focus:border-[#D9B100] transition-colors resize-y ${
-              validationError ? 'border-red-500/80' : 'border-shield-border'
-            }`}
-          />
-
-          {validationError && (
-            <p className="text-xs text-red-400 flex items-center gap-1.5 font-mono pt-1">
-              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-              {validationError}
-            </p>
-          )}
-        </div>
-
-        {/* Actions bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
-          <div className="text-xs text-shield-subtle flex items-center gap-2">
-            <ShieldAlert className="w-4 h-4 text-[#D9B100]" />
-            <span>
-              TF-IDF text extraction analyzes vocabulary, suspicious phrases, and structural indicators.
-            </span>
+          {/* Posting textarea */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-mono uppercase tracking-wider text-[#F2F4F6] font-semibold">
+                Job / Internship Posting Text <span className="text-[#D9B100]">*</span>
+              </label>
+              <div className="text-[11px] font-mono text-[#626A77] flex items-center gap-2">
+                <span>{wordCount} words</span>
+                <span>·</span>
+                <span className={charCount < minChars && charCount > 0 ? "text-amber-400" : ""}>
+                  {charCount} chars (min {minChars})
+                </span>
+              </div>
+            </div>
+            <textarea
+              rows={14}
+              value={description}
+              onChange={(e) => {
+                setDescription(e.target.value);
+                if (validationError && e.target.value.length >= minChars) setValidationError("");
+              }}
+              placeholder="Paste the full job posting, internship offer, recruiter email, or messaging transcript here..."
+              className={`w-full p-4 rounded-xl bg-[#191C22] border text-sm text-[#F2F4F6] placeholder-[#3B3F46] font-mono text-xs leading-relaxed focus:outline-none focus:border-[#D9B100] transition-colors resize-y ${
+                validationError ? "border-red-500/80" : "border-[#2C313C]"
+              }`}
+            />
+            {validationError && (
+              <p className="text-xs text-red-400 flex items-center gap-1.5 font-mono pt-1">
+                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                {validationError}
+              </p>
+            )}
           </div>
 
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-md bg-[#D9B100] hover:bg-[#e5bc05] text-black font-semibold text-sm transition-colors disabled:opacity-50"
-          >
-            {isSubmitting ? (
-              <>
-                <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                <span>Checking Inference Pipeline...</span>
-              </>
-            ) : (
-              <>
-                <SearchCheck className="w-4 h-4 stroke-[2.5]" />
-                <span>Analyze Job Opportunity</span>
-              </>
-            )}
-          </button>
+          {/* Submit error */}
+          {submitError && (
+            <div className="p-4 rounded-xl bg-red-950/20 border border-red-800/60">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-red-300 leading-relaxed">{submitError}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Action bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
+            <p className="text-xs text-[#626A77] flex items-center gap-2">
+              <ShieldAlert className="w-4 h-4 text-[#D9B100]" />
+              TF-IDF extraction · SHAP token attribution · Calibrated probability
+            </p>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[#D9B100] hover:bg-[#e5bc05] text-[#101114] font-bold text-sm transition-all duration-150 shadow-lg shadow-[#D9B100]/20 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-[#101114] border-t-transparent rounded-full animate-spin" />
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  <SearchCheck className="w-4 h-4 stroke-[2.5]" />
+                  Analyze Job Opportunity
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+
+        {/* Bottom info card */}
+        <div className="mt-8 p-5 rounded-2xl bg-[#191C22] border border-[#2C313C]">
+          <div className="flex items-start gap-3">
+            <FileText className="w-5 h-5 text-[#D9B100] flex-shrink-0 mt-0.5" />
+            <div>
+              <h3 className="text-sm font-semibold text-[#F2F4F6] mb-1.5">What happens after you submit?</h3>
+              <ul className="space-y-1 text-xs text-[#949BA6] leading-relaxed">
+                <li>1. Your text is vectorized using the TF-IDF pipeline trained on 17,880 EMSCAD postings.</li>
+                <li>2. The ML classifier outputs a calibrated fraud probability score.</li>
+                <li>3. Heuristic rules detect explicit red flags (payment requests, off-platform contact, etc.).</li>
+                <li>4. SHAP values identify the exact tokens that most influenced the classification.</li>
+              </ul>
+            </div>
+          </div>
         </div>
-      </form>
+      </div>
     </div>
   );
 }

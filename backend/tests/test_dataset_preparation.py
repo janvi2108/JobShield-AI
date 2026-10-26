@@ -217,3 +217,53 @@ def test_resolve_dataset_path_missing():
     """Verify FileNotFoundError is raised when dataset is missing."""
     with pytest.raises(FileNotFoundError, match="Specified dataset path does not exist"):
         resolve_dataset_path("non_existent_folder/missing_file.csv")
+
+
+def test_deduplicate_dataframe_tracks_target_distribution():
+    """Verify deduplication tracks fraud vs legitimate duplicate counts accurately."""
+    df = pd.DataFrame({
+        "title": ["Job A", "Job A", "Job B", "Job C", "Job C"],
+        "description": ["Desc A", "Desc A", "Desc B", "Desc C", "Desc C"],
+        "fraudulent": [1, 1, 0, 0, 0],
+    })
+    cleaned, info = deduplicate_dataframe(df)
+    assert len(cleaned) == 3
+    assert info["exact_duplicates_removed"] == 2
+    assert info["duplicates_fraudulent_1"] == 1
+    assert info["duplicates_legitimate_0"] == 1
+    assert info["retained_fraudulent_1"] == 1
+    assert info["retained_legitimate_0"] == 2
+
+
+def test_processed_emscad_files_integrity():
+    """Verify actual generated processed files exist and match exact verified row counts."""
+    processed_dir = Path("data/processed")
+    if not (processed_dir / "train.csv").exists():
+        pytest.skip("Processed EMSCAD files not yet generated.")
+
+    train_df = pd.read_csv(processed_dir / "train.csv")
+    val_df = pd.read_csv(processed_dir / "validation.csv")
+    test_df = pd.read_csv(processed_dir / "test.csv")
+
+    assert len(train_df) == 14105
+    assert len(val_df) == 1763
+    assert len(test_df) == 1764
+
+    # Verify target distributions
+    assert int((train_df["fraudulent"] == 1).sum()) == 685
+    assert int((train_df["fraudulent"] == 0).sum()) == 13420
+
+    assert int((val_df["fraudulent"] == 1).sum()) == 85
+    assert int((val_df["fraudulent"] == 0).sum()) == 1678
+
+    assert int((test_df["fraudulent"] == 1).sum()) == 86
+    assert int((test_df["fraudulent"] == 0).sum()) == 1678
+
+    # Sum of fraudulent across splits
+    total_fraud = (train_df["fraudulent"] == 1).sum() + (val_df["fraudulent"] == 1).sum() + (test_df["fraudulent"] == 1).sum()
+    assert total_fraud == 856
+
+    # Verify leakage column excluded
+    for df in [train_df, val_df, test_df]:
+        assert "in_balanced_dataset" not in df.columns
+        assert "fraudulent" in df.columns

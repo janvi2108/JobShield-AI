@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
 import {
   ShieldAlert,
   LayoutDashboard,
@@ -16,7 +16,7 @@ export default function Sidebar({ backendHealth, mobileOpen, setMobileOpen }) {
   const navItems = [
     {
       to: '/',
-      label: 'Dashboard',
+      label: 'Home',
       icon: LayoutDashboard,
       badge: 'Overview',
     },
@@ -57,13 +57,17 @@ export default function Sidebar({ backendHealth, mobileOpen, setMobileOpen }) {
       >
         {/* Brand header */}
         <div className="h-16 px-5 flex items-center justify-between border-b border-shield-border">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded bg-[#D9B100]/10 border border-[#D9B100]/40 flex items-center justify-center text-[#D9B100]">
+          <Link
+            to="/"
+            onClick={() => setMobileOpen(false)}
+            className="flex items-center gap-2.5 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D9B100] rounded-md p-1 -ml-1"
+          >
+            <div className="w-9 h-9 rounded bg-[#D9B100]/10 border border-[#D9B100]/40 flex items-center justify-center text-[#D9B100] group-hover:border-[#D9B100]/70 transition-colors">
               <ShieldAlert className="w-5 h-5 stroke-[2]" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-bold tracking-tight text-shield-text text-base">
+                <span className="font-bold tracking-tight text-shield-text text-base group-hover:text-white transition-colors">
                   JobShield
                 </span>
                 <span className="text-[11px] font-mono px-1.5 py-0.2 bg-[#D9B100] text-black font-semibold rounded">
@@ -74,7 +78,7 @@ export default function Sidebar({ backendHealth, mobileOpen, setMobileOpen }) {
                 Fraud Detection Engine
               </p>
             </div>
-          </div>
+          </Link>
         </div>
 
         {/* Navigation list */}

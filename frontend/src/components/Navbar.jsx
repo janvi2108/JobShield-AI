@@ -73,7 +73,7 @@ export default function Navbar({
 
         {/* Link to FastAPI interactive documentation */}
         <a
-          href="http://127.0.0.1:8000/docs"
+          href="http://127.0.0.1:8008/docs"
           target="_blank"
           rel="noreferrer"
           className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded border border-shield-border bg-shield-card hover:bg-shield-surface/50 text-xs font-mono text-shield-muted hover:text-shield-text transition-colors"
