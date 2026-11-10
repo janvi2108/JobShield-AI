@@ -1,7 +1,8 @@
-"""JobShield AI ? Model Prediction and Explainability Service.
+"""JobShield AI — Model Prediction and Explainability Service.
 
 Provides production inference, calibrated probability scoring, heuristic threat
-detection, and linear attribution / SHAP explainability for incoming job postings.
+detection, linear attribution / SHAP explainability, and grounded AI explanation
+enrichment for incoming job postings.
 """
 
 from __future__ import annotations
@@ -30,6 +31,8 @@ from backend.app.services.ml_pipeline import (
     extract_combined_text,
     extract_binary_features,
 )
+from backend.app.services.explainability.evidence_generator import extract_evidence_findings
+from backend.app.services.explainability.risk_analyzer import analyze_composite_risk_full
 
 logger = logging.getLogger("jobshield.prediction")
 
@@ -84,23 +87,35 @@ def extract_heuristic_signals(req: JobAnalysisRequest) -> List[str]:
 
     # 1. Financial / Upfront fee demands
     keywords_financial = [
-        "registration fee", "application fee", "training fee", "wire transfer",
-        "moneygram", "western union", "cash app", "send money", "deposit required",
-        "crypto", "bitcoin", "usdt"
+        "registration fee", "application fee", "training fee", "onboarding fee",
+        "wire transfer", "moneygram", "western union", "cash app", "send money",
+        "deposit required", "security deposit", "caution deposit", "crypto",
+        "bitcoin", "usdt", "refundable onboarding fee", "refundable registration fee",
+        "pay before joining", "account activation fee"
     ]
     if any(k in text for k in keywords_financial):
-        signals.append("Financial solicitation or upfront registration/training fee requested")
+        # Contextual check: make sure not talking about company registration
+        if not ("registered under" in text or "company registration" in text):
+            signals.append("Financial solicitation, upfront registration fee, or onboarding deposit requested")
 
-    # 2. Telegram / WhatsApp / External chat recruitment
+    # 2. Sensitive documents via informal channels
+    keywords_docs = ["aadhaar", "pan card", "passport", "bank details", "bank passbook", "voter id"]
     keywords_chat = ["telegram", "whatsapp", "t.me", "wa.me", "signal messenger", "viber", "hangouts"]
-    if any(k in text for k in keywords_chat):
+    has_doc = any(d in text for d in keywords_docs)
+    has_chat = any(c in text for c in keywords_chat)
+
+    if has_doc and has_chat:
+        signals.append("Sensitive identity documents (Aadhaar/PAN/Passport) requested via informal messaging (WhatsApp/Telegram)")
+    elif has_chat:
         signals.append("Recruitment redirected to encrypted/external chat platform (Telegram/WhatsApp)")
 
-    # 3. Unrealistic guarantees
+    # 3. Unrealistic guarantees & bypassed hiring
     keywords_guarantee = [
         "guaranteed approval", "guaranteed income", "no interview required",
         "no experience needed", "no experience necessary", "easy money",
-        "immediate hire guaranteed"
+        "immediate hire guaranteed", "guaranteed job confirmation", "guaranteed selection",
+        "guaranteed placement", "no technical interview", "no coding assessment",
+        "confirmation within 24 hours"
     ]
     if any(k in text for k in keywords_guarantee):
         signals.append("Unrealistic compensation guarantee or bypassed hiring/interview process")
@@ -116,11 +131,99 @@ def extract_heuristic_signals(req: JobAnalysisRequest) -> List[str]:
         signals.append("No verified corporate employer logo present in posting")
 
     # 6. High urgency / artificial pressure
-    keywords_urgency = ["urgent hiring", "act now", "positions filling fast", "apply within 24 hours", "limited spots left"]
+    keywords_urgency = ["urgent hiring", "immediate hiring", "act now", "positions filling fast", "apply within 24 hours", "limited spots left", "limited vacancies"]
     if any(k in text for k in keywords_urgency):
         signals.append("High-pressure urgency language designed to bypass scrutiny")
 
     return signals
+
+
+# Structural noise and stopwords to filter out from feature attribution displays
+JUNK_FEATURE_TOKENS = {
+    "list", "paragraph", "span", "div", "html", "item", "true", "false",
+    "none", "nan", "null", "yes", "no", "ul", "li", "p", "br", "gt", "lt",
+    "amp", "nbsp", "quot", "and", "or", "the", "in", "of", "to", "for", "with",
+    "at", "by", "from", "on", "as", "an", "is", "it", "are", "be", "this", "that",
+    "missing", "unspecified", "not specified", "other", "n/a", "na"
+}
+
+ALLOWED_SHORT_TOKENS = {"c#", "c++", "go", "r", "ui", "ux", "qa", "ml", "ai", "db", "ip"}
+
+
+def normalize_feature_token(fname: str) -> Optional[str]:
+    """Convert technical pipeline feature names into readable, meaningful tokens.
+
+    Filters out:
+    - Pure numeric tokens ('11', '0', '1', '2014')
+    - HTML and structural artifacts ('list', 'span', 'div')
+    - Raw categorical encodings into human-readable descriptions
+    """
+    if not fname:
+        return None
+
+    # Handle binary indicator features
+    if fname.startswith("bin:"):
+        bin_key = fname[4:].strip()
+        mapping = {
+            "has_company_logo": "Verified corporate logo",
+            "has_questions": "Applicant screening questionnaire",
+            "telecommuting": "Remote / telecommuting arrangement",
+        }
+        return mapping.get(bin_key, bin_key.replace("_", " ").title())
+
+    # Handle categorical encoded features
+    if fname.startswith("cat:"):
+        cat_key = fname[4:].strip()
+        # Normalization mappings for common EMSCAD categorical features
+        cat_mappings = {
+            "required_education_Bachelor's Degree": "Bachelor's Degree requirement",
+            "required_education_Master's Degree": "Master's Degree requirement",
+            "required_education_High School or equivalent": "High School education requirement",
+            "required_education_Unspecified": None,
+            "employment_type_Full-time": "Full-time employment structure",
+            "employment_type_Part-time": "Part-time employment structure",
+            "employment_type_Contract": "Contract engagement",
+            "employment_type_Internship": "Internship structure",
+            "employment_type_Temporary": "Temporary role",
+            "employment_type_Other": None,
+            "required_experience_Entry level": "Entry-level position",
+            "required_experience_Mid-Senior level": "Mid-Senior experience requirement",
+            "required_experience_Associate": "Associate-level experience",
+            "required_experience_Director": "Director-level experience",
+            "required_experience_Executive": "Executive-level experience",
+            "required_experience_Not Applicable": None,
+        }
+        if cat_key in cat_mappings:
+            return cat_mappings[cat_key]
+
+        # General clean up for other categorical features
+        clean = re.sub(r"^(required_education|employment_type|required_experience)_", "", cat_key)
+        return clean.replace("_", " ").strip()
+
+    # Handle text TF-IDF tokens
+    token = fname
+    if fname.startswith("text:"):
+        token = fname[5:].strip()
+
+    # Remove quotes
+    token = token.strip("\"'")
+
+    # Filter out pure numbers or digits (e.g. '11', '0', '2014', '100')
+    if token.isdigit():
+        return None
+
+    # Filter out structural noise and stopwords
+    low_tok = token.lower()
+    if low_tok in JUNK_FEATURE_TOKENS:
+        return None
+
+    # Filter out tokens that are too short unless in allowed technical vocabulary
+    if len(token) < 3 and low_tok not in ALLOWED_SHORT_TOKENS:
+        return None
+
+    return token
+
+
 def compute_linear_attributions(
     X_sample: sparse.csr_matrix,
     model: Any,
@@ -131,7 +234,6 @@ def compute_linear_attributions(
     try:
         # Extract weight vector from model (CalibratedClassifierCV or linear model)
         if hasattr(model, "calibrated_classifiers_"):
-            # Average coefficients across CV folds
             weights = np.mean([clf.estimator.coef_.ravel() for clf in model.calibrated_classifiers_], axis=0)
             intercept = float(np.mean([clf.estimator.intercept_[0] for clf in model.calibrated_classifiers_]))
         elif hasattr(model, "coef_"):
@@ -151,15 +253,11 @@ def compute_linear_attributions(
                 fname = feature_names[idx]
                 w = float(weights[idx])
                 contrib = float(w * val)
-                
-                # Clean token display
-                clean_token = fname
-                if fname.startswith("text:"):
-                    clean_token = fname[5:]
-                elif fname.startswith("cat:"):
-                    clean_token = fname[4:]
-                elif fname.startswith("bin:"):
-                    clean_token = fname[4:]
+
+                # Normalize and clean token for human-readable display
+                clean_token = normalize_feature_token(fname)
+                if not clean_token:
+                    continue
 
                 contributions.append(
                     FeatureContribution(
@@ -171,10 +269,26 @@ def compute_linear_attributions(
                     )
                 )
 
+        # Deduplicate contributions by token name (keeping the one with highest magnitude)
+        dedup_contribs: Dict[str, FeatureContribution] = {}
+        for c in contributions:
+            if c.token not in dedup_contribs or abs(c.contribution) > abs(dedup_contribs[c.token].contribution):
+                dedup_contribs[c.token] = c
+
+        unique_contributions = list(dedup_contribs.values())
+
         # Sort positive contributions (fraud-indicative) descending
-        fraud_indicative = sorted([c for c in contributions if c.contribution > 0], key=lambda x: x.contribution, reverse=True)[:top_n]
-        # Sort negative contributions (legit-indicative) ascending
-        legit_indicative = sorted([c for c in contributions if c.contribution < 0], key=lambda x: x.contribution)[:top_n]
+        fraud_indicative = sorted(
+            [c for c in unique_contributions if c.contribution > 0],
+            key=lambda x: x.contribution,
+            reverse=True
+        )[:top_n]
+
+        # Sort negative contributions (legit-indicative) ascending (most negative first)
+        legit_indicative = sorted(
+            [c for c in unique_contributions if c.contribution < 0],
+            key=lambda x: x.contribution
+        )[:top_n]
 
         interp = (
             f"Classification informed by {len(fraud_indicative)} scam-correlated patterns and "
@@ -201,7 +315,7 @@ def compute_linear_attributions(
 
 
 def analyze_job_posting(req: JobAnalysisRequest) -> JobAnalysisResponse:
-    """Perform real ML inference on submitted job posting."""
+    """Perform real ML inference, grounded evidence detection, and risk aggregation on submitted job posting."""
     bundle = load_model_bundle()
 
     if bundle is None:
@@ -244,30 +358,35 @@ def analyze_job_posting(req: JobAnalysisRequest) -> JobAnalysisResponse:
     }
     input_df = pd.DataFrame([row_dict])
 
-    # Transform features
+    # Transform features through pipeline
     X_sample = preprocessor.transform(input_df)
 
-    # Predict calibrated probability
+    # 1. Obtain raw calibrated probability from ML model
     probs = model.predict_proba(X_sample)[0]
-    fraud_prob = round(float(probs[1]), 4)
-    is_fraud = bool(fraud_prob >= decision_threshold)
+    ml_fraud_prob = round(float(probs[1]), 4)
 
-    # Risk level categorization
-    if fraud_prob >= 0.75:
-        risk_level = "CRITICAL"
-    elif fraud_prob >= decision_threshold:
-        risk_level = "HIGH"
-    elif fraud_prob >= 0.25:
-        risk_level = "MODERATE"
-    else:
-        risk_level = "LOW"
+    # 2. Extract grounded evidence findings and threat heuristics
+    warnings, reassuring, unverified = extract_evidence_findings(
+        title=req.title,
+        description=req.description,
+        company_name=req.company_name or "",
+        company_profile=req.company_profile or "",
+        requirements=req.requirements or "",
+        benefits=req.benefits or "",
+    )
+    heuristic_signals = extract_heuristic_signals(req)
+
+    # 3. Transparent evidence-based risk aggregation
+    risk_level, risk_basis, final_score, is_fraud = analyze_composite_risk_full(
+        fraud_probability=ml_fraud_prob,
+        decision_threshold=decision_threshold,
+        warning_indicators=warnings,
+        reassuring_indicators=reassuring,
+    )
 
     verdict = "Potentially Fraudulent Job Posting" if is_fraud else "Likely Legitimate Employment Posting"
 
-    # Threat heuristics
-    heuristic_signals = extract_heuristic_signals(req)
-
-    # Explainability attributions
+    # 4. Explainability attributions (filtered and normalized)
     explanation = compute_linear_attributions(X_sample, model, feature_names)
 
     # Flatten explanations into shap_values for frontend charts
@@ -278,13 +397,41 @@ def analyze_job_posting(req: JobAnalysisRequest) -> JobAnalysisResponse:
         for item in explanation.top_legitimate_indicators:
             shap_tokens.append({"token": item.token, "value": item.contribution})
 
+    # 5. Grounded AI explanation synthesis (with deterministic fallback)
+    grounded_exp_data = None
+    try:
+        from backend.app.services.llm.explanation_service import generate_grounded_explanation
+        top_f = explanation.top_fraud_indicators if explanation else []
+        top_l = explanation.top_legitimate_indicators if explanation else []
+        g_exp, _, _ = generate_grounded_explanation(
+            title=req.title,
+            description=req.description,
+            company_name=req.company_name or "",
+            company_profile=req.company_profile or "",
+            requirements=req.requirements or "",
+            benefits=req.benefits or "",
+            fraud_probability=final_score,
+            is_fraudulent=is_fraud,
+            risk_level=risk_level,
+            decision_threshold=decision_threshold,
+            model_name=model_name,
+            top_fraud_features=top_f,
+            top_legit_features=top_l,
+            precomputed_warnings=warnings,
+            precomputed_reassuring=reassuring,
+            precomputed_unverified=unverified,
+        )
+        grounded_exp_data = g_exp.model_dump()
+    except Exception as exc:
+        logger.warning(f"Could not generate grounded explanation in prediction_service: {exc}", exc_info=True)
+
     return JobAnalysisResponse(
         success=True,
         model_status="trained",
         prediction=1 if is_fraud else 0,
         is_fraudulent=is_fraud,
-        fraud_probability=fraud_prob,
-        score=fraud_prob,
+        fraud_probability=final_score,
+        score=final_score,
         verdict=verdict,
         risk_level=risk_level,
         decision_threshold=decision_threshold,
@@ -296,7 +443,13 @@ def analyze_job_posting(req: JobAnalysisRequest) -> JobAnalysisResponse:
         analyzed_at=datetime.datetime.now(datetime.timezone.utc).isoformat(),
         metadata={
             "calibrated_scoring": True,
+            "ml_fraud_probability": ml_fraud_prob,
+            "evidence_adjusted_score": final_score,
             "features_evaluated": int(X_sample.shape[1]),
             "active_tokens": int(X_sample.nnz),
+            "evidence_warnings_count": len(warnings),
+            "evidence_reassuring_count": len(reassuring),
+            "risk_scoring_basis": risk_basis,
+            "grounded_explanation": grounded_exp_data,
         },
     )

@@ -1,4 +1,4 @@
-ï»¿import React, { useState } from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight, Shield, ShieldAlert, ShieldCheck, Brain, AlertTriangle,
@@ -87,7 +87,7 @@ export default function LandingPage() {
             <span className="block mt-1">Before You <span className="relative inline-block">Apply.<span aria-hidden="true" className="absolute -bottom-1 left-0 right-0 h-[3px] rounded-full" style={{ background: "linear-gradient(90deg, #D9B100, #F3DA87, #D9B100)" }} /></span></span>
           </h1>
           <p className="mt-8 text-lg sm:text-xl text-[#949BA6] max-w-2xl mx-auto leading-relaxed">
-            JobShield AI analyzes job and internship postings using machine learning trained on the <span className="text-[#F2F4F6] font-medium">EMSCAD dataset</span> â€” 17,880 real postings â€” to detect employment fraud before you invest your time.
+            JobShield AI analyzes job and internship postings using machine learning trained on the <span className="text-[#F2F4F6] font-medium">EMSCAD dataset</span> — 17,880 real postings — to detect employment fraud before you invest your time.
           </p>
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link to="/analyze" className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-full bg-[#D9B100] hover:bg-[#e5bc05] text-[#101114] font-bold text-sm sm:text-base transition-all duration-200 shadow-xl shadow-[#D9B100]/20 hover:shadow-[#D9B100]/35 hover:scale-[1.03]">
@@ -128,12 +128,12 @@ export default function LandingPage() {
           <div className="flex flex-col items-start mb-14">
             <Eyebrow>Core Detection Engine</Eyebrow>
             <h2 className="mt-5 text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-[#F2F4F6]">Built on real fraud patterns.<br /><span className="text-[#D9B100]">Explained transparently.</span></h2>
-            <p className="mt-5 text-base text-[#949BA6] max-w-2xl leading-relaxed">Every prediction is backed by explainable AI â€” you see exactly which words and patterns triggered the fraud signal, not just a probability score.</p>
+            <p className="mt-5 text-base text-[#949BA6] max-w-2xl leading-relaxed">Every prediction is backed by explainable AI — you see exactly which words and patterns triggered the fraud signal, not just a probability score.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
               { icon: Brain, num: "01", title: "TF-IDF Text Extraction", desc: "Converts raw job posting text into high-dimensional feature vectors, capturing unigrams and bigrams that distinguish fraud from legitimate postings." },
-              { icon: ShieldAlert, num: "02", title: "ML Classification", desc: "Four candidate classifiers â€” Logistic Regression, Linear SVM, Random Forest, and XGBoost â€” trained on the EMSCAD dataset with stratified cross-validation." },
+              { icon: ShieldAlert, num: "02", title: "ML Classification", desc: "Four candidate classifiers — Logistic Regression, Linear SVM, Random Forest, and XGBoost — trained on the EMSCAD dataset with stratified cross-validation." },
               { icon: Eye, num: "03", title: "SHAP Explainability", desc: "SHAP LinearExplainer or TreeExplainer generates per-token attribution scores, revealing exactly which phrases increased or decreased the fraud probability." },
             ].map(({ icon: Icon, num, title, desc }) => (
               <div key={num} className="group p-7 rounded-2xl bg-[#191C22] border border-[#2C313C] hover:border-[#D9B100]/30 hover:bg-[#1C1F27] transition-all duration-300">
@@ -161,7 +161,7 @@ export default function LandingPage() {
                 <WorkflowStep num="1" icon={FileText} title="Paste the job posting" desc="Copy the full text of any job listing, internship offer, or recruiter message into the Analyze form." />
                 <WorkflowStep num="2" icon={Zap} title="TF-IDF feature extraction" desc="The backend vectorizes your text using the trained TF-IDF pipeline, extracting thousands of weighted n-gram features." />
                 <WorkflowStep num="3" icon={Brain} title="ML inference & probability score" desc="The winning classifier outputs a calibrated fraud probability score between 0 and 100%." />
-                <WorkflowStep num="4" icon={Eye} title="SHAP attribution breakdown" desc="See exactly which tokens pushed the score up or down â€” no black box, complete explainability." />
+                <WorkflowStep num="4" icon={Eye} title="SHAP attribution breakdown" desc="See exactly which tokens pushed the score up or down — no black box, complete explainability." />
               </div>
             </div>
 
@@ -229,7 +229,7 @@ export default function LandingPage() {
             {[
               { icon: DollarSign, title: "Upfront Payment Requests", desc: "Demands for registration fees, training kits, or equipment deposits before starting work.", severity: "CRITICAL", cls: "text-red-400 bg-red-950/20 border-red-800/40" },
               { icon: Phone, title: "Off-Platform Communication", desc: "Pressure to move to WhatsApp, Telegram, or personal email for confidential processes.", severity: "HIGH", cls: "text-amber-400 bg-amber-950/20 border-amber-800/40" },
-              { icon: Globe, title: "Missing Company Details", desc: "No verifiable company name, domain email, or LinkedIn â€” classic anonymity tactics.", severity: "HIGH", cls: "text-amber-400 bg-amber-950/20 border-amber-800/40" },
+              { icon: Globe, title: "Missing Company Details", desc: "No verifiable company name, domain email, or LinkedIn — classic anonymity tactics.", severity: "HIGH", cls: "text-amber-400 bg-amber-950/20 border-amber-800/40" },
               { icon: Clock, title: "Artificial Urgency", desc: "Phrases like limited spots, apply today only, or 24-hour deadline to rush decisions.", severity: "MEDIUM", cls: "text-yellow-500 bg-yellow-950/20 border-yellow-800/40" },
               { icon: Star, title: "Unrealistic Compensation", desc: "Entry-level roles promising thousands per week with no skills required.", severity: "HIGH", cls: "text-amber-400 bg-amber-950/20 border-amber-800/40" },
               { icon: MessageSquare, title: "Vague Job Descriptions", desc: "Extremely short or generic postings with no specific responsibilities or requirements.", severity: "MEDIUM", cls: "text-yellow-500 bg-yellow-950/20 border-yellow-800/40" },
@@ -278,7 +278,7 @@ export default function LandingPage() {
                   "SHAP LinearExplainer for Logistic Regression & SVM",
                   "SHAP TreeExplainer for Random Forest & XGBoost",
                   "Per-token positive and negative contribution scores",
-                  "Calibrated probability outputs â€” not raw logit scores",
+                  "Calibrated probability outputs — not raw logit scores",
                   "PR-AUC as the primary metric for imbalanced data",
                 ].map((item) => (
                   <div key={item} className="flex items-center gap-3 text-sm text-[#949BA6]">
@@ -318,12 +318,12 @@ export default function LandingPage() {
             <Eyebrow>FAQ</Eyebrow>
             <h2 className="mt-5 text-3xl sm:text-4xl font-bold tracking-tight text-[#F2F4F6]">Common questions</h2>
           </div>
-          <FAQItem q="What is the EMSCAD dataset?" a="EMSCAD (Employment Scam Aegean Dataset) is a real-world dataset published by the University of the Aegean containing 17,880 job postings â€” 866 of which are verified fraudulent. It is the gold standard for employment fraud ML research." />
+          <FAQItem q="What is the EMSCAD dataset?" a="EMSCAD (Employment Scam Aegean Dataset) is a real-world dataset published by the University of the Aegean containing 17,880 job postings — 866 of which are verified fraudulent. It is the gold standard for employment fraud ML research." />
           <FAQItem q="How accurate is the fraud detection?" a="Accuracy alone is misleading for imbalanced datasets. We evaluate using PR-AUC and F1-Score on the minority fraud class. The winning model from our 4-candidate comparison is reported on the Model Performance page." />
           <FAQItem q="Can I trust a low risk result?" a="No ML model is perfect. A low-risk score means the posting text does not match patterns seen in EMSCAD fraud cases. Always cross-reference with independent company research before applying." />
           <FAQItem q="Does JobShield AI store my submitted postings?" a="No. Submitted text is processed in memory by the FastAPI backend and discarded after inference. No posting text is stored persistently." />
           <FAQItem q="What does the SHAP waterfall chart show?" a="SHAP values measure each word's contribution to the fraud score. Positive values push the score toward fraud; negative values push it toward legitimate. This shows exactly why the model made its decision." />
-          <FAQItem q="Is this project open source?" a="Yes. The full ML pipeline â€” data preparation, training, evaluation, and FastAPI backend â€” is openly structured and documented in this project repository." />
+          <FAQItem q="Is this project open source?" a="Yes. The full ML pipeline — data preparation, training, evaluation, and FastAPI backend — is openly structured and documented in this project repository." />
         </div>
       </section>
 
@@ -333,7 +333,7 @@ export default function LandingPage() {
           <AmbientGlow className="top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] opacity-20" style={{ background: "radial-gradient(ellipse, rgba(217,177,0,0.35) 0%, transparent 70%)" }} />
           <div className="relative z-10">
             <h2 className="text-3xl sm:text-5xl font-bold tracking-tight text-[#F2F4F6] mb-5">Protect your next opportunity.</h2>
-            <p className="text-base text-[#949BA6] max-w-xl mx-auto mb-10 leading-relaxed">Paste any suspicious job posting and get a full fraud risk analysis â€” with explainable AI â€” in seconds.</p>
+            <p className="text-base text-[#949BA6] max-w-xl mx-auto mb-10 leading-relaxed">Paste any suspicious job posting and get a full fraud risk analysis — with explainable AI — in seconds.</p>
             <Link to="/analyze" className="inline-flex items-center justify-center gap-2.5 px-10 py-4 rounded-full bg-[#D9B100] hover:bg-[#e5bc05] text-[#101114] font-bold text-base transition-all duration-200 shadow-xl shadow-[#D9B100]/20 hover:shadow-[#D9B100]/35 hover:scale-[1.03]">
               <Search className="w-4 h-4 stroke-[2.5]" />Start Free Analysis
             </Link>
@@ -353,9 +353,9 @@ export default function LandingPage() {
               <Link to="/analyze" className="hover:text-[#949BA6] transition-colors">Analyze</Link>
               <Link to="/results" className="hover:text-[#949BA6] transition-colors">Results</Link>
               <Link to="/performance" className="hover:text-[#949BA6] transition-colors">Performance</Link>
-              <a href="http://127.0.0.1:8008/docs" target="_blank" rel="noreferrer" className="hover:text-[#949BA6] transition-colors">API Docs</a>
+              <a href="http://127.0.0.1:8001/docs" target="_blank" rel="noreferrer" className="hover:text-[#949BA6] transition-colors">API Docs</a>
             </nav>
-            <div className="text-xs text-[#3B3F46] font-mono">Â© 2026 JobShield AI</div>
+            <div className="text-xs text-[#3B3F46] font-mono">© 2026 JobShield AI</div>
           </div>
         </div>
       </footer>

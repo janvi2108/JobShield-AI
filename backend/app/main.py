@@ -1,8 +1,12 @@
+import logging
+
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from .core.config import settings
 from .api import api_router
+
+logger = logging.getLogger("jobshield.main")
 
 
 def create_application() -> FastAPI:
@@ -20,12 +24,19 @@ def create_application() -> FastAPI:
         openapi_url=f"{settings.API_V1_PREFIX}/openapi.json",
     )
 
+    # Initialise SQLite database on startup (no-op if tables already exist)
+    try:
+        from .db.database import init_db
+        init_db()
+    except Exception as exc:  # pragma: no cover
+        logger.warning(f"Database initialisation warning: {exc}")
+
     # Restrict CORS to allowed frontend development origins
     application.add_middleware(
         CORSMiddleware,
         allow_origins=settings.CORS_ORIGINS,
         allow_credentials=True,
-        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_methods=["GET", "POST", "DELETE", "PUT", "PATCH", "OPTIONS"],
         allow_headers=["*"],
     )
 

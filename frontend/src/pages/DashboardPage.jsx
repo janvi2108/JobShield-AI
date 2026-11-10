@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ShieldAlert,
@@ -12,12 +12,43 @@ import {
   Layers,
   Sparkles,
   Info,
+  RefreshCw,
+  Eye,
 } from 'lucide-react';
 import StatusBadge from '../components/StatusBadge';
 import EmptyState from '../components/EmptyState';
+import { fetchAnalyses, fetchAnalysisStats } from '../services/api';
 
 export default function DashboardPage({ backendHealth, backendError }) {
   const isModelTrained = backendHealth?.model_status === 'trained';
+
+  // Live database telemetry
+  const [recentAnalyses, setRecentAnalyses] = useState([]);
+  const [dbStats, setDbStats] = useState(null);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+
+  useEffect(() => {
+    async function loadTelemetry() {
+      setLoadingHistory(true);
+      try {
+        const [analysesRes, statsRes] = await Promise.all([
+          fetchAnalyses({ page: 1, page_size: 5 }),
+          fetchAnalysisStats(),
+        ]);
+        if (analysesRes.ok && analysesRes.data) {
+          setRecentAnalyses(analysesRes.data.analyses || analysesRes.data.data || []);
+        }
+        if (statsRes.ok && statsRes.data) {
+          setDbStats(statsRes.data);
+        }
+      } catch {
+        // Fallback
+      } finally {
+        setLoadingHistory(false);
+      }
+    }
+    loadTelemetry();
+  }, []);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -54,10 +85,10 @@ export default function DashboardPage({ backendHealth, backendError }) {
               </Link>
 
               <Link
-                to="/performance"
+                to="/history"
                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-md bg-shield-surface/60 hover:bg-shield-surface text-shield-text font-medium text-sm border border-shield-border transition-colors"
               >
-                <span>Inspect Model Pipeline</span>
+                <span>View Analysis History</span>
               </Link>
             </div>
           </div>
@@ -79,7 +110,7 @@ export default function DashboardPage({ backendHealth, backendError }) {
               <div className="flex justify-between">
                 <span className="text-shield-subtle">Backend API:</span>
                 <span className={backendError ? 'text-red-400' : 'text-emerald-400'}>
-                  {backendError ? 'Offline (Port 8008)' : 'Active (FastAPI)'}
+                  {backendError ? 'Offline (Port 8001)' : 'Active (FastAPI)'}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -195,7 +226,7 @@ export default function DashboardPage({ backendHealth, backendError }) {
         </div>
       </section>
 
-      {/* Dataset Context & Subsystem Breakdown */}
+      {/* Dataset Context & Live Database Telemetry Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Dataset Breakdown */}
         <section className="p-5 rounded-lg bg-shield-card border border-shield-border space-y-4">
@@ -239,12 +270,12 @@ export default function DashboardPage({ backendHealth, backendError }) {
             <Info className="w-3.5 h-3.5 text-shield-soft flex-shrink-0 mt-0.5" />
             <span>
               Metadata leak fields (such as <code className="text-shield-text">in_balanced_dataset</code>) 
-              will be excluded prior to fitting.
+              are excluded during model preparation.
             </span>
           </div>
         </section>
 
-        {/* Model Pipeline Status */}
+        {/* Candidate Classifiers */}
         <section className="p-5 rounded-lg bg-shield-card border border-shield-border space-y-4">
           <div className="flex items-center justify-between border-b border-shield-border pb-3">
             <div className="flex items-center gap-2">
@@ -261,7 +292,7 @@ export default function DashboardPage({ backendHealth, backendError }) {
           </div>
 
           <p className="text-xs text-shield-muted leading-relaxed">
-            The four candidate algorithms will be trained on the training partition and evaluated via 
+            The four candidate algorithms are trained on the training partition and evaluated via 
             PR-AUC and F1-Score:
           </p>
 
@@ -271,11 +302,11 @@ export default function DashboardPage({ backendHealth, backendError }) {
               <span className="text-shield-subtle">TF-IDF Linear Baseline</span>
             </div>
             <div className="flex items-center justify-between p-2 rounded bg-shield-base border border-shield-border">
-              <span className="text-shield-text">2. Linear SVM</span>
-              <span className="text-shield-subtle">High-Dimensional Sparse</span>
+              <span className="text-[#F3DA87] font-semibold">2. Linear SVM</span>
+              <span className="text-[#D9B100]">★ Selected Champion</span>
             </div>
             <div className="flex items-center justify-between p-2 rounded bg-shield-base border border-shield-border">
-              <span className="text-shield-subtle">3. Random Forest</span>
+              <span className="text-shield-text">3. Random Forest</span>
               <span className="text-shield-subtle">Ensemble Non-Linear</span>
             </div>
             <div className="flex items-center justify-between p-2 rounded bg-shield-base border border-shield-border">
@@ -289,10 +320,10 @@ export default function DashboardPage({ backendHealth, backendError }) {
           </div>
         </section>
 
-        {/* Analysis Session / Recent Activity Empty State */}
-        <section className="p-5 rounded-lg bg-shield-card border border-shield-border flex flex-col justify-between">
+        {/* Live Analysis Telemetry & Recent Activity */}
+        <section className="p-5 rounded-lg bg-shield-card border border-shield-border flex flex-col justify-between space-y-4">
           <div>
-            <div className="flex items-center justify-between border-b border-shield-border pb-3 mb-4">
+            <div className="flex items-center justify-between border-b border-shield-border pb-3 mb-3">
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-[#D9B100]" />
                 <h3 className="text-sm font-semibold text-shield-text">
@@ -300,25 +331,89 @@ export default function DashboardPage({ backendHealth, backendError }) {
                 </h3>
               </div>
               <span className="text-[11px] font-mono text-shield-subtle">
-                Session Log
+                Live SQLite Telemetry
               </span>
             </div>
 
-            <EmptyState
-              icon={FileSearch}
-              title="No Inferences Recorded"
-              description="No job postings have been submitted for analysis during this session."
-              technicalNote="Subsequent phases will persist session evaluation telemetry and SQLite history."
-              actionButton={
-                <Link
-                  to="/analyze"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-shield-surface/60 hover:bg-shield-surface text-shield-text text-xs font-medium border border-shield-border transition-colors"
-                >
-                  <span>Go to Analyze Job</span>
-                  <ArrowRight className="w-3 h-3" />
-                </Link>
-              }
-            />
+            {/* Mini Stat Summary */}
+            {dbStats && (
+              <div className="grid grid-cols-3 gap-2 mb-3 font-mono text-center text-xs">
+                <div className="p-2 rounded bg-shield-base border border-shield-border">
+                  <div className="text-[10px] text-shield-subtle">Total</div>
+                  <div className="font-bold text-shield-text">{dbStats.total_analyses}</div>
+                </div>
+                <div className="p-2 rounded bg-shield-base border border-shield-border">
+                  <div className="text-[10px] text-shield-subtle">Scams</div>
+                  <div className="font-bold text-red-400">{dbStats.fraudulent_count}</div>
+                </div>
+                <div className="p-2 rounded bg-shield-base border border-shield-border">
+                  <div className="text-[10px] text-shield-subtle">Legit</div>
+                  <div className="font-bold text-emerald-400">{dbStats.legitimate_count}</div>
+                </div>
+              </div>
+            )}
+
+            {loadingHistory ? (
+              <div className="p-6 text-center text-xs font-mono text-shield-subtle">
+                <RefreshCw className="w-4 h-4 animate-spin mx-auto mb-2 text-[#D9B100]" />
+                Fetching live inference records...
+              </div>
+            ) : recentAnalyses.length === 0 ? (
+              <EmptyState
+                icon={FileSearch}
+                title="No Inferences Recorded"
+                description="No job postings have been submitted for analysis during this session."
+                technicalNote="Analyses are saved to SQLite and accessible via the History view."
+                actionButton={
+                  <Link
+                    to="/analyze"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-shield-surface/60 hover:bg-shield-surface text-shield-text text-xs font-medium border border-shield-border transition-colors"
+                  >
+                    <span>Go to Analyze Job</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </Link>
+                }
+              />
+            ) : (
+              <div className="space-y-2 font-mono text-xs">
+                {recentAnalyses.map((item) => (
+                  <Link
+                    key={item.id}
+                    to={`/history/${item.id}`}
+                    className="p-2.5 rounded bg-shield-base border border-shield-border hover:border-[#D9B100]/50 transition-colors flex items-center justify-between group"
+                  >
+                    <div className="truncate max-w-[170px]">
+                      <div className="text-shield-text font-medium truncate group-hover:text-[#D9B100] transition-colors">
+                        {item.title || "Untitled Role"}
+                      </div>
+                      <div className="text-[11px] text-shield-subtle truncate">
+                        {item.company || "Not specified"}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span
+                        className={`text-[11px] font-bold ${
+                          item.is_fraudulent ? "text-red-400" : "text-emerald-400"
+                        }`}
+                      >
+                        {(item.fraud_probability * 100).toFixed(0)}%
+                      </span>
+                      <Eye className="w-3.5 h-3.5 text-shield-subtle group-hover:text-shield-text" />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="pt-3 border-t border-shield-border/60 flex items-center justify-between text-xs font-mono">
+            <Link
+              to="/history"
+              className="text-[#D9B100] hover:underline flex items-center gap-1"
+            >
+              View Full History <ArrowRight className="w-3 h-3" />
+            </Link>
+            <span className="text-shield-subtle text-[11px]">SQLite WAL Enabled</span>
           </div>
         </section>
       </div>

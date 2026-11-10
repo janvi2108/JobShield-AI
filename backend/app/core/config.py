@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     """Application runtime configuration with environment variable support."""
 
     PROJECT_NAME: str = "JobShield AI"
-    VERSION: str = "0.1.0"
+    VERSION: str = "0.2.0"
     API_V1_PREFIX: str = "/api"
     ENVIRONMENT: str = "development"
 
@@ -18,8 +18,21 @@ class Settings(BaseSettings):
     ]
 
     # Model status tracking (honest lifecycle reporting)
-    MODEL_STATUS: str = "pending_training"
-    ACTIVE_MODEL_NAME: str = "none"
+    MODEL_STATUS: str = "trained"
+    ACTIVE_MODEL_NAME: str = "Linear Support Vector Machine"
+
+    # LLM & Explanation Configuration
+    # Set LLM_PROVIDER=none (default) to run entirely offline with local deterministic engine.
+    # Set LLM_PROVIDER=groq and provide LLM_API_KEY to enable optional AI-enhanced explanations.
+    LLM_PROVIDER: str = "none"
+    LLM_API_KEY: str = ""
+    LLM_MODEL: str = "llama-3.3-70b-versatile"
+    LLM_TEMPERATURE: float = 0.1
+    LLM_TIMEOUT: int = 30
+
+    # URL Extraction & Security
+    URL_FETCH_TIMEOUT: int = 10
+    MAX_URL_CONTENT_BYTES: int = 2 * 1024 * 1024  # 2 MB limit
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
@@ -35,7 +48,6 @@ class Settings(BaseSettings):
         extra="ignore",
         protected_namespaces=(),
     )
-
 
 
 settings = Settings()

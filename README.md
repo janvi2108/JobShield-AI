@@ -1,6 +1,6 @@
 # JobShield AI: Explainable AI-Based Fraud Detection for Job & Internship Opportunities
 
-JobShield AI is a specialized cybersecurity and machine learning platform engineered to detect, classify, and explain fraudulent job postings and predatory internship opportunities. Using statistical Natural Language Processing (TF-IDF), high-dimensional classifiers, heuristic threat policies, and SHAP-aligned feature attributions, JobShield AI provides job-seekers, career advisors, and university students with transparent, verifiable scam risk assessments.
+JobShield AI is a specialized cybersecurity and machine learning platform engineered to detect, classify, and explain fraudulent job postings and predatory internship opportunities. Using statistical Natural Language Processing (TF-IDF), high-dimensional classifiers, heuristic threat policies, grounded Large Language Model (LLM) reasoning, and transparent feature attributions, JobShield AI provides job-seekers, career advisors, and university students with evidence-grounded scam risk assessments.
 
 ---
 
@@ -12,28 +12,43 @@ Employment fraud has escalated rapidly with the rise of remote hiring, generativ
 - **Fake Check & Money Mule Traps**: Overpayment scams requiring cryptocurrency transfers or wire disbursements.
 - **Spoofed Recruiter Identities**: Impersonating established companies using throwaway email domains or untraceable messaging apps (Telegram, WhatsApp).
 
-JobShield AI tackles this challenge through **Explainable AI (XAI)**?delivering not merely a black-box probability, but an actionable, evidence-grounded risk breakdown explaining *why* a posting was flagged.
+JobShield AI tackles this challenge through **Explainable AI (XAI)**—delivering not merely a black-box probability, but an actionable, evidence-grounded risk breakdown explaining *why* a posting was flagged.
 
 ---
 
-## 2. Part 1 Implementation Summary
+## 2. System Architecture & Features
 
-Part 1 represents the complete, fully functional core detection engine, trained benchmark models, inference API, explainability, frontend integration, and test suite.
+### Part 1: Core ML Detection Engine
+- **EMSCAD Data Preparation**: Leakage removal (`in_balanced_dataset`), deduplication (248 duplicates removed), and stratified 80/10/10 partitioning across 17,632 retained postings.
+- **Candidate Classifiers**: Evaluated 4 candidate models (Logistic Regression, Linear SVM, Random Forest, XGBoost) across 10,031 features.
+- **Champion Classifier**: **Linear Support Vector Machine** (Calibrated) achieving **0.9046 Val PR-AUC** and **0.8608 Val F1-score**.
+- **Held-Out Test Benchmark**: 1,764 untouched samples: **0.8899 PR-AUC**, **0.8344 F1**, **0.8831 Precision**, **0.7907 Recall**, **0.9847 Accuracy**.
+- **Model Serialization**: Persisted complete pipeline to `models/model.joblib` and benchmark telemetry to `models/metrics.json`.
 
-| Component | Status | Implementation Details |
-|---|---|---|
-| **EMSCAD Data Preparation** | Completed | `scripts/prepare_dataset.py` with leakage removal (`in_balanced_dataset`), deduplication (248 duplicates removed), and stratified 80/10/10 partitioning. |
-| **Data Accounting & Transparency** | Completed | Fully accounted for raw 17,880 -> 17,632 retained postings (accounting for 866 -> 856 fraudulent count). |
-| **Model Training & Comparison** | Completed | `scripts/train_models.py` training 4 candidates (Logistic Regression, Linear SVM, Random Forest, XGBoost) on 10,031 features. |
-| **Model Selection & Tuning** | Completed | Evaluated candidates on validation split using PR-AUC and minority F1-score; tuned optimal decision threshold (0.48). |
-| **Champion Model** | Completed | **Linear Support Vector Machine** (Calibrated) achieving **0.9046 Val PR-AUC** and **0.8608 Val F1-score**. |
-| **Held-Out Test Benchmark** | Completed | Evaluated on untouched test split (1,764 samples): **0.8899 PR-AUC**, **0.8344 F1**, **0.8831 Precision**, **0.7907 Recall**, **0.9847 Accuracy**. |
-| **Model Serialization** | Completed | Persisted complete pipeline to `models/model.joblib` (7.5 MB) and benchmark telemetry to `models/metrics.json`. |
-| **Inference Service** | Completed | `backend/app/services/prediction_service.py` with calibrated scoring, risk categorization, and threat heuristics. |
-| **Explainable AI (XAI)** | Completed | Linear feature attribution and SHAP-aligned token contributions for transparent reasoning. |
-| **FastAPI Backend Endpoints** | Completed | `GET /api/health`, `GET /api/metrics`, `POST /api/analyze` running on port 8008. |
-| **React + Vite Frontend** | Completed | Unified dark aesthetic (`LandingPage`, `AnalyzePage`, `ResultsPage`, `PerformancePage`). |
-| **Automated Test Suite** | Completed | 28 automated tests covering dataset preparation, pipeline feature extraction, API routes, and inference (100% passing). |
+### Part 2: Advanced AI Integration & Grounded Explainability
+1. **Smart Job Posting Extraction**:
+   - **SSRF-Protected URL Fetcher**: Blocks private subnets (RFC 1918), loopback, link-local, cloud metadata IPs (`169.254.169.254`), and validates redirects.
+   - **HTML Content Parser**: Strips scripts/styles and isolates job containers using BeautifulSoup.
+   - **Adversarial Defang & Cleaner**: Normalizes Unicode, whitespace, and neutralizes prompt injection patterns.
+   - **20-Field Extractor**: Extracts structured fields via Groq LLM with deterministic regex/heuristic fallback.
+   - **Normalizer**: Produces completeness scores and missing attribute audit.
+2. **Grounded AI Explanation Generator**:
+   - **Model Authority**: The Linear SVM champion model remains the sole classification authority; LLMs never alter the ML score or verdict.
+   - **Groq Cloud LLM Provider**: High-speed Llama 3.3 inference producing grounded structured JSON explanations.
+   - **Deterministic Fallback**: Guaranteed offline execution when an API key is absent.
+   - **Evidence Grounding**: Verifiable textual excerpts for financial solicitations, untraceable payments, encrypted chat redirects, and unverified credentials.
+3. **Advanced Risk Analysis**:
+   - Four-tier composite risk categorization: `CRITICAL`, `HIGH`, `MODERATE`, `LOW`.
+4. **External Dataset Validation Pipeline**:
+   - Automated ingestion and schema adapter for external benchmarks (e.g. Internship Job Scam Dataset).
+   - Domain shift telemetry computing accuracy, precision delta, recall delta, F1 retention rate, PR-AUC, and ROC-AUC.
+   - CLI script (`scripts/validate_external_dataset.py`) for automated evaluation.
+5. **Modern Frontend Experience**:
+   - React + Vite + Tailwind CSS with dark cybersecurity aesthetic (`#101114`, `#191C22`, `#2C313C`, `#D9B100`).
+   - Tabbed input (Smart URL Extraction, Paste Description, Direct Entry).
+   - Extracted attribute preview with completeness progress bar.
+   - Rich results cards with grounded explanations, warning indicators, positive signals, and applicant safety checklist.
+   - Out-of-domain generalization telemetry table on the model performance page.
 
 ---
 
@@ -43,7 +58,7 @@ The raw dataset (`data/raw/DataSet.csv`) contains **17,880 records** (17,014 leg
 
 ### Resolution of the Fraudulent Count Discrepancy (866 -> 856)
 1. **Raw Duplicates**: Across all 18 raw columns, 235 exact duplicate rows exist (227 legitimate, 8 fraudulent).
-2. **Leakage-Column Impact**: The metadata column `in_balanced_dataset` indicates whether Aegean researchers sampled the row for their 50/50 balanced sub-corpus. Excluding `in_balanced_dataset` exposes **13 additional duplicate records** (11 legitimate, 2 fraudulent) where all real job posting attributes are identical but differed only by that sampling flag.
+2. **Leakage-Column Impact**: Excluding the leakage sampling column `in_balanced_dataset` exposes **13 additional duplicate records** (11 legitimate, 2 fraudulent) where all real job posting attributes are identical.
 3. **Total Deduplication**: Exactly **248 duplicate records** were removed (238 legitimate, 10 fraudulent).
 4. **Retained Distribution**: Exactly **17,632 unique postings** (16,776 legitimate [95.15%], 856 fraudulent [4.85%]).
 
@@ -75,201 +90,57 @@ Partitioning was performed with fixed seed `42` preserving the 4.85% fraud ratio
 | **XGBoost Classifier** | 0.8721 | 0.7898 | 0.8611 | 0.7294 | 0.740 | Boosted |
 | **Random Forest Classifier** | 0.7977 | 0.7425 | 0.7561 | 0.7294 | 0.600 | Bagging Ensemble |
 
-### Champion Model Selection Rationale
-Linear Support Vector Machine (with Sigmoid calibration) achieved the highest Precision-Recall AUC (0.9046) and highest F1-score (0.8608) on the minority fraud class. Margin maximization in sparse TF-IDF text spaces proves exceptionally effective at isolating rare employment fraud phrase patterns while maintaining low false-positive rates (0.5% on test data).
-
-### Final Unbiased Evaluation on Held-Out Test Split (1,764 samples)
-- **PR-AUC**: `0.8899`
-- **ROC-AUC**: `0.9877`
-- **F1-Score (Minority)**: `0.8344`
-- **Precision (Minority)**: `0.8831`
-- **Recall (Minority)**: `0.7907`
-- **Overall Accuracy**: `0.9847`
-- **Test Confusion Matrix**:
-  - True Negatives (Legitimate verified): **1,669** (99.5%)
-  - False Positives (Legitimate flagged as scam): **9** (0.5%)
-  - False Negatives (Scams missed): **18** (20.9%)
-  - True Positives (Scams caught): **68** (79.1%)
-
 ---
 
-## 5. Directory Structure
+## 5. Quickstart & Local Execution
 
-```
-JobShield-AI/
-??? backend/
-?   ??? app/
-?   ?   ??? main.py                  # FastAPI application entrypoint & middleware
-?   ?   ??? api/
-?   ?   ?   ??? __init__.py          # API router aggregator
-?   ?   ?   ??? routes/
-?   ?   ?       ??? health.py        # GET /api/health
-?   ?   ?       ??? metrics.py       # GET /api/metrics
-?   ?   ?       ??? analyze.py       # POST /api/analyze
-?   ?   ??? core/
-?   ?   ?   ??? config.py            # Pydantic Settings & CORS configuration
-?   ?   ??? schemas/
-?   ?   ?   ??? health.py            # Health schemas
-?   ?   ?   ??? analysis.py          # Prediction & Explainability schemas
-?   ?   ??? services/
-?   ?       ??? health_service.py    # Subsystem telemetry
-?   ?       ??? ml_pipeline.py       # Reusable EMSCADPreprocessor & feature extractor
-?   ?       ??? prediction_service.py # Inference, heuristic signals & linear attributions
-?   ??? tests/
-?       ??? test_dataset_preparation.py # 13 dataset integrity tests
-?       ??? test_health.py              # 4 health endpoint tests
-?       ??? test_ml_pipeline.py         # 3 preprocessor unit tests
-?       ??? test_prediction_and_api.py  # 8 prediction and API integration tests
-??? data/
-?   ??? raw/
-?   ?   ??? DataSet.csv              # Raw EMSCAD dataset (17,880 rows)
-?   ??? processed/
-?       ??? train.csv                # 14,105 training samples
-?       ??? validation.csv           # 1,763 validation samples
-?       ??? test.csv                 # 1,764 held-out test samples
-?       ??? dataset_report.json      # Raw inspection telemetry
-?       ??? split_summary.json       # Partition summary & accounting
-??? frontend/
-?   ??? src/
-?   ?   ??? App.jsx                  # Unified application shell & routing
-?   ?   ??? index.css                # Tailwind CSS styling & custom dark palette
-?   ?   ??? components/
-?   ?   ?   ??? LandingNavbar.jsx    # Unified top navbar with live backend status
-?   ?   ?   ??? StatusBadge.jsx      # Reusable badge component
-?   ?   ?   ??? ErrorBoundary.jsx    # Client error boundary
-?   ?   ??? pages/
-?   ?   ?   ??? LandingPage.jsx      # Product landing page
-?   ?   ?   ??? AnalyzePage.jsx      # Submission form with sample pre-fill
-?   ?   ?   ??? ResultsPage.jsx      # Live inference report & SHAP attributions
-?   ?   ?   ??? PerformancePage.jsx  # Candidate benchmark table & confusion matrix
-?   ?   ?   ??? NotFoundPage.jsx     # 404 handler
-?   ?   ??? services/
-?   ?       ??? api.js               # API client (health, analyze, metrics)
-??? models/
-?   ??? model.joblib                 # Persisted champion pipeline (7.5 MB)
-?   ??? metrics.json                 # Genuine candidate comparison & test metrics
-??? scripts/
-    ??? inspect_dataset.py           # Dataset inspection CLI tool
-    ??? prepare_dataset.py           # Dataset preparation and splitting CLI
-    ??? train_models.py              # ML candidate training & evaluation pipeline
-```
-
----
-
-## 6. Setup and Reproduction Instructions
-
-### Prerequisites
-- Python 3.12+
-- Node.js 18+ and npm
-
-### 1. Install Dependencies
+### 1. Environment Setup
 ```bash
-# Backend dependencies
-pip install -r backend/requirements.txt
-
-# Frontend dependencies
-cd frontend
-npm install
-cd ..
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
 ```
 
-### 2. Dataset Preparation
-To reproduce the clean, leakage-free 80/10/10 partitions:
-```bash
-python scripts/prepare_dataset.py --data-path data/raw/DataSet.csv
+Optional: Set your Groq API key in `.env` for LLM explanation generation (deterministic grounded fallback is used automatically if omitted):
+```env
+LLM_API_KEY=your_groq_api_key_here
 ```
 
-### 3. Model Training & Benchmark Evaluation
-To reproduce candidate training, validation tuning, and test evaluation:
-```bash
-python scripts/train_models.py
-```
-This generates `models/model.joblib` and `models/metrics.json`.
-
-### 4. Run Automated Tests
+### 2. Run Automated Test Suite
 ```bash
 python -m pytest backend/tests
 ```
-All 28 tests will execute and validate the pipeline end-to-end.
+*Runs all 45 automated unit and integration tests across data prep, ML inference, extraction, explainability, and validation.*
 
-### 5. Start the Application
-Start the FastAPI backend:
+### 3. Run External Dataset Validation CLI
 ```bash
-python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8008 --reload
+python scripts/validate_external_dataset.py
 ```
-Start the React frontend (in another terminal):
+
+### 4. Start Backend Service
+```bash
+uvicorn backend.app.main:app --host 127.0.0.1 --port 8008 --reload
+```
+API Documentation available at: **`http://127.0.0.1:8008/docs`**
+
+### 5. Start React Frontend
 ```bash
 cd frontend
+npm install
 npm run dev
 ```
 Open **`http://localhost:5173/`** in your browser.
 
 ---
 
-## 7. API Reference
+## 6. Complete API Reference
 
-### `GET /api/health`
-Returns system status and model readiness.
-```json
-{
-  "status": "healthy",
-  "service": "jobshield-ai-backend",
-  "version": "0.1.0",
-  "model_status": "trained",
-  "details": {
-    "api_prefix": "/api",
-    "model_subsystem": { "artifacts_found": "model.joblib" }
-  }
-}
-```
-
-### `GET /api/metrics`
-Returns candidate classifier comparison and test split confusion matrix.
-
-### `POST /api/analyze`
-Analyzes a submitted job posting.
-**Request Body**:
-```json
-{
-  "title": "URGENT Data Entry Agent",
-  "company_name": "Fast Earn LLC",
-  "description": "Urgent hiring. Earn $800 per week guaranteed. Send $150 training fee via wire transfer or telegram before starting.",
-  "has_company_logo": false
-}
-```
-**Response Body**:
-```json
-{
-  "success": true,
-  "model_status": "trained",
-  "prediction": 1,
-  "is_fraudulent": true,
-  "fraud_probability": 0.9282,
-  "score": 0.9282,
-  "verdict": "Potentially Fraudulent Job Posting",
-  "risk_level": "CRITICAL",
-  "decision_threshold": 0.48,
-  "model_name": "Linear Support Vector Machine",
-  "heuristic_signals": [
-    "Financial solicitation or upfront registration/training fee requested",
-    "Recruitment redirected to encrypted/external chat platform (Telegram/WhatsApp)",
-    "Unrealistic compensation guarantee or bypassed hiring/interview process",
-    "No verified corporate employer logo present in posting"
-  ],
-  "shap_values": [
-    { "token": "earn", "value": 0.3824 },
-    { "token": "data entry", "value": 0.2317 },
-    { "token": "work home", "value": 0.2232 },
-    { "token": "guaranteed", "value": 0.1571 },
-    { "token": "send", "value": 0.1250 }
-  ]
-}
-```
-
----
-
-## 8. Limitations & Future Scope (Part 2)
-
-- **Text Length Dependency**: Predictions are most reliable when complete descriptions are supplied (minimum 50 words recommended).
-- **Domain Adaptation**: The EMSCAD dataset reflects postings collected through 2014; emerging 2024-2026 scam vectors (such as fake AI trainer roles or remote crypto arbitrage tasks) are supplemented through heuristic keyword policies.
-- **Part 2 Scope**: Integration of Large Language Model (GenAI) explanation summaries, recruiter email domain DNS verification, and SQLite persistent analysis history.
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/api/health` | `GET` | Service status, model artifact presence, pipeline health. |
+| `/api/metrics` | `GET` | Benchmark comparison metrics across 4 candidate models. |
+| `/api/analyze` | `POST` | Live ML inference on job postings (probability, verdict, risk signals, SHAP attributions, grounded explanation). |
+| `/api/extract/url` | `POST` | SSRF-safe URL crawling and structured 20-field job extraction. |
+| `/api/extract/text` | `POST` | NLP parsing and structured 20-field extraction from unstructured text. |
+| `/api/explain` | `POST` | Evidence-grounded AI explanation report with verified citations and safety checklist. |
+| `/api/validation/external` | `GET` | Out-of-domain evaluation and generalization shift telemetry. |

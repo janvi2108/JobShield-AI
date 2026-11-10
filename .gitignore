@@ -64,3 +64,9 @@ data/processed/*
 !data/processed/.gitkeep
 models/*
 !models/.gitkeep
+
+# SQLite database (auto-created on first run)
+jobshield.db
+jobshield.db-shm
+jobshield.db-wal
+*.db

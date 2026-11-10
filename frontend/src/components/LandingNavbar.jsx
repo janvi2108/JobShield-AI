@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X, Shield, Activity } from "lucide-react";
 
@@ -54,6 +54,7 @@ export default function LandingNavbar({ backendHealth, backendLoading, backendEr
         <nav className="hidden md:flex items-center gap-8">
           <Link to="/" className={navLinkClass("/")}>Home</Link>
           <Link to="/analyze" className={navLinkClass("/analyze")}>Analyze</Link>
+          <Link to="/history" className={navLinkClass("/history")}>History</Link>
           <Link to="/performance" className={navLinkClass("/performance")}>Performance</Link>
           <Link to="/#capabilities" onClick={handleAboutClick} className="text-sm font-medium text-[#949BA6] hover:text-[#F2F4F6] transition-colors">About</Link>
         </nav>
@@ -91,6 +92,7 @@ export default function LandingNavbar({ backendHealth, backendLoading, backendEr
             {[
               ["/", "Home"],
               ["/analyze", "Analyze"],
+              ["/history", "Analysis History"],
               ["/performance", "Model Performance"],
             ].map(([path, label]) => (
               <Link key={path} to={path} onClick={() => setMobileMenuOpen(false)} className={`py-1 transition-colors ${isActive(path) ? "text-[#F2F4F6]" : "text-[#949BA6] hover:text-[#F2F4F6]"}`}>

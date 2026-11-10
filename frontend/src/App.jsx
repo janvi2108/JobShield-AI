@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import LandingNavbar from "./components/LandingNavbar";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -6,6 +6,8 @@ import LandingPage from "./pages/LandingPage";
 import AnalyzePage from "./pages/AnalyzePage";
 import ResultsPage from "./pages/ResultsPage";
 import PerformancePage from "./pages/PerformancePage";
+import HistoryPage from "./pages/HistoryPage";
+import AnalysisDetailPage from "./pages/AnalysisDetailPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import { checkBackendHealth } from "./services/api";
 
@@ -51,6 +53,8 @@ function AppShell() {
             }
           />
           <Route path="/results" element={<ResultsPage analysisResult={analysisResult} />} />
+          <Route path="/history" element={<HistoryPage />} />
+          <Route path="/history/:id" element={<AnalysisDetailPage />} />
           <Route path="/performance" element={<PerformancePage backendHealth={backendHealth} />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
